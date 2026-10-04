@@ -24,6 +24,15 @@
   - Entry.swift is a thin adapter — CLI behavior verified identical (bad year / `--end-year` alone / inverted range → same messages, exit 2)
   - **CI bug found & fixed**: pre-existing ill-typed test assertion (`Character?` vs `String`) had been cratering the CI type checker (both `39d9cb0` runs red, masked as a compiler bug); fixed and green on `8498931`
 
+### What's In Progress
+
+- [ ] Offload MVP: 7-screen wizard skeleton (placeholders) — grilling session settled the design (`agents/wizard-skeleton-grilling.md`, 14 decisions, all confirmed):
+  - SPM → PhotosExportCore `from: "0.1.0"`; mock at the event level (`MockEngine.exportAssets` mirrors the real signature + a `limit:` param for the "10 recent" preset — documents the engine's missing count-based fetch); swap to real ops = one call site
+  - Screens: Intro (simulated ~2s scan → fictional numbers) · Consent-plan · USB (demo simulate-drive) · Destination (real NSOpenPanel, mkdir mocked) · Scope presets (10 recent / this year / all years, counts shown; custom row disabled "later") · Progress (realistic ~350ms pacing, Cancel-with-confirm, Show in Finder → real temp folder) · Summary (demo delete, Export more = fresh run)
+  - Minimal visuals (style pass later) · Back everywhere except progress/summary · "Step N of 7" indicator
+  - Execution: worker subagent `wizard-skeleton` implementing now → reviewer verifies vs spec → build → user runs E2E via `swift run`
+  - **Standing rule (user-set):** every subagent on this project consults the ponytail skills (`~/repos/ponytail/skills/`) AND the offload `.pi/skills/` — workers get write-swift + swiftui-expert-skill; reviewers get those + ponytail/ponytail-review
+
 ### Review completed (2026-10-04)
 
 - [x] Subagent review of the refactor (`0cc5ee7..39d9cb0`) — done in offload-rooted session via `@tintinweb/pi-subagents`

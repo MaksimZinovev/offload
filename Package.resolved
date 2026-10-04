@@ -1,0 +1,15 @@
+{
+  "originHash" : "07cb658d8d75768de0fcb0a9ef2f271686a5a0989d242bf2244e1d321f1b7e08",
+  "pins" : [
+    {
+      "identity" : "photosexport",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/MaksimZinovev/PhotosExport",
+      "state" : {
+        "revision" : "849893186fe60fef7b0f760daa3ee62e01373247",
+        "version" : "0.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}
