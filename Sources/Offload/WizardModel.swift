@@ -28,13 +28,52 @@ final class WizardModel: ObservableObject {
     @Published private(set) var analysis: Analysis = .scanning
     @Published var driveConnected = false
     @Published var destination: URL?
-    @Published private(set) var preset: ScopePreset?
-
-    /// Screen 5's one-tap selection.
-    func selectPreset(_ preset: ScopePreset) {
-        self.preset = preset
-    }
+    // Scope (screen 5): "The last 10 photos" is the preselected small-batch
+    // default; year chips + export count refine it (per user-experience.md).
+    @Published private(set) var latestSelected = true
+    @Published private(set) var selectedYears: Set<Int> = []
+    @Published private(set) var exportCount: Int? = 10
     @Published private(set) var run: RunState = .idle
+
+    /// Fictional per-year library counts (sums to 62,539 = "all years").
+    static let yearCounts: [Int: Int] = [2026: 4_812, 2025: 11_234, 2024: 18_976, 2023: 27_517]
+    static let currentYear = 2026
+
+    // MARK: - Scope (screen 5)
+
+    func selectLatest() {
+        latestSelected = true
+        selectedYears = []
+    }
+
+    func selectThisYear() {
+        latestSelected = false
+        selectedYears = [Self.currentYear]
+    }
+
+    func toggleYear(_ year: Int) {
+        latestSelected = false
+        if !selectedYears.insert(year).inserted {
+            selectedYears.remove(year)
+        }
+    }
+
+    /// Number of photos to export; nil = All.
+    func setExportCount(_ count: Int?) {
+        exportCount = count
+    }
+
+    /// Photos the current scope matches (fictional).
+    var scopeTotal: Int {
+        if latestSelected { return 10 }
+        let yearsSum = selectedYears.reduce(0) { $0 + (Self.yearCounts[$1] ?? 0) }
+        return exportCount.map { min($0, yearsSum) } ?? yearsSum
+    }
+
+    /// ~540 photos/min, rounded up.
+    var estimatedMinutes: Int {
+        max(1, Int((Double(scopeTotal) / 540).rounded(.up)))
+    }
 
     private var scanTask: Task<Void, Never>?
     private var exportTask: Task<Void, Never>?
@@ -76,7 +115,7 @@ final class WizardModel: ObservableObject {
         switch step {
         case .usb: guard driveConnected else { return }
         case .destination: guard destination != nil else { return }
-        case .scope: guard preset != nil else { return }
+        case .scope: guard scopeTotal > 0 else { return }
         default: break
         }
         guard let nextStep = Step(rawValue: step.rawValue + 1) else { return }
@@ -86,16 +125,30 @@ final class WizardModel: ObservableObject {
     // MARK: - Export (screens 5-7)
 
     func startExport() {
-        guard let destination, let preset, case .idle = run else { return }
+        guard let destination, case .idle = run, scopeTotal > 0 else { return }
         step = .progress
+        let selection: YearSelection
+        if latestSelected {
+            // The latest 10 — a count-based fetch the real engine grows later;
+            // the mock treats .currentYear as "whatever the wizard showed".
+            selection = .currentYear
+        } else {
+            let years = selectedYears.sorted()
+            if years.count == 1 {
+                selection = .year(years[0])
+            } else if let first = years.first, let last = years.last {
+                selection = .range(start: first, end: last)
+            } else {
+                return
+            }
+        }
         // The real engine will take no `limit`; the mock uses it to know the
         // displayed total (see MockEngine). This is the one call site to
         // change when swapping in the real engine.
-        let limit = preset.photoCount
-        let request = ExportRequest(exportBase: destination, selection: .currentYear)
+        let request = ExportRequest(exportBase: destination, selection: selection)
         exportTask = Task {
             do {
-                let summary = try await MockEngine.exportAssets(request, limit: limit) { [weak self] event in
+                let summary = try await MockEngine.exportAssets(request, limit: scopeTotal) { [weak self] event in
                     self?.handleEvent(event)
                 }
                 run = .finished(summary)
@@ -124,9 +177,9 @@ final class WizardModel: ObservableObject {
         }
     }
 
-    /// Progress screen's ETA: the scope estimate the user already saw on
-    /// the Scope screen (the mock is fictional; no own pacing model).
-    var etaMinutes: Int { preset?.estimatedMinutes ?? 1 }
+    /// Progress screen's ETA: the scope estimate (fictional; no own pacing
+    /// model in the mock).
+    var etaMinutes: Int { estimatedMinutes }
 
     // MARK: - Fresh run (after summary)
 
@@ -134,40 +187,11 @@ final class WizardModel: ObservableObject {
     func exportMore() {
         exportTask?.cancel()
         run = .idle
-        preset = nil
+        selectLatest()
+        exportCount = 10
         destination = nil
         driveConnected = false
         step = .intro
         beginAnalysis()
-    }
-}
-
-/// The three scope presets. Value-type data; counts and estimates derive
-/// from the fictional library numbers.
-enum ScopePreset: CaseIterable, Hashable {
-    case recent10
-    case thisYear
-    case allYears
-
-    var label: String {
-        switch self {
-        case .recent10: "The last 10 photos"
-        case .thisYear: "This year"
-        case .allYears: "All years"
-        }
-    }
-
-    /// Fictional counts: 10 / 4,812 (this year) / 62,539 (all years).
-    var photoCount: Int {
-        switch self {
-        case .recent10: 10
-        case .thisYear: 4812
-        case .allYears: 62539
-        }
-    }
-
-    /// ~540 photos/min, rounded up.
-    var estimatedMinutes: Int {
-        max(1, Int((Double(photoCount) / 540).rounded(.up)))
     }
 }

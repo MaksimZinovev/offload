@@ -13,7 +13,7 @@ struct SummaryView: View {
         if case .finished(let summary) = model.run {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Library: \(ScopePreset.allYears.photoCount.formatted()) photos — unchanged")
+                    Text("On iPhone: \(totalPhotoCount.formatted()) photos — unchanged")
                     Text("Exported: \(summary.exported.formatted()) to \(destinationText)")
                 }
                 Divider()
@@ -40,5 +40,10 @@ struct SummaryView: View {
     private var destinationText: String {
         let base = model.destination?.path(percentEncoded: false) ?? "?"
         return base + "/Offload"
+    }
+
+    /// Fictional total: the sum of the per-year counts.
+    private var totalPhotoCount: Int {
+        WizardModel.yearCounts.values.reduce(0, +)
     }
 }

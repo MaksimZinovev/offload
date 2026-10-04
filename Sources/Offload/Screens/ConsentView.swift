@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// Screen 2 — informed-consent plan. The footer's Continue IS the consent.
+/// Screen 2 — the plan, verbatim from user-experience.md ("Step 3 —
+/// Show user concise list of what to expect"). Footer's Continue IS the consent.
 struct ConsentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Here's the plan:")
-            Text("I'll look at your library.")
-            Text("You pick a drive; your photos are copied to it.")
-            Text("Nothing is deleted.")
+            Text("1. Connect iPhone via USB cable.")
+            Text("2. Select photos to copy")
+            Text("3. Select destination folder")
+            Text("4. Complete copying process")
+            Text("5. Confirm if you want to delete photos from iPhone")
+            Text("6. Nothing is deleted.")
         }
     }
 }

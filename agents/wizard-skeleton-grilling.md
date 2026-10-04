@@ -43,3 +43,12 @@ A: Screen 1 — a fresh run with clean state (re-scan, nothing kept). Simplest m
 
 ## Q14 — Confirmed and built?
 A: Confirmed. Chrome: single non-resizable window, "Step N of 7" indicator top, Back/Next footer, confirm-before-step gates. Worker implements (swiftui-expert-skill + write-swift preloaded), reviewer verifies against this spec, then `swift build` / `swift run`.
+
+## Q15 — What is the USB device and the photo source? (post-E2E feedback)
+A: The iPhone. Photos live on the phone; the user connects the iPhone via USB; Offload copies phone photos to the destination. Roadmap consequence: PhotosExportCore reads the Mac's Photos library (PHAsset) — direct iPhone access needs a different API (ImageCaptureCore); queued as an engine side-quest, not blocking the skeleton.
+
+## Q16 — Plan screen step list?
+A: Name all 5 steps, including "You connect your iPhone via USB": look → connect iPhone → pick destination → copy (nothing deleted) → review summary.
+
+## Q17 — USB screen framing?
+A: "Connect your iPhone with a USB cable." Demo state: "iPhone connected: Dad's iPhone (demo)". Summary reframed to "On iPhone: N photos — unchanged".

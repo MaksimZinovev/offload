@@ -41,7 +41,7 @@
 
 - [ ] **Next: user runs `swift run` and clicks through all 7 screens E2E** (verify: gates disable Next until drive/folder/preset chosen; USB demo toggle; Start copying → live "Copying N of M" + ETA + Show in Finder; Cancel confirm → back to Scope; Summary + demo delete + Export more → fresh scan)
 
-- [ ] Engine side-quest queue (when real ops land): count/limit-based fetch for "recent N"; photo-count query API; typed metadata at the GUI boundary
+- [ ] Engine side-quest queue (when real ops land): **iPhone-as-source — Q15 (2026-10-04) reframe: the photo source is the iPhone, not the Mac Photos library** → direct iPhone access is outside PhotosExportCore's current shape (PHAsset = Mac library); needs ImageCaptureCore (ICCameraDevice) in the engine or an import-first bridge; ALSO open design Q: with iPhone-as-source, when does the analysis (counts) happen — screen 1 precedes the connect step, but an unconnected phone can't be counted (skeleton: fictional numbers, real ops must resolve); count/limit-based fetch for "recent N"; typed metadata at the GUI boundary
 
 ### Review completed (2026-10-04)
 

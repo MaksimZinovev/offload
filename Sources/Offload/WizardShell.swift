@@ -72,7 +72,7 @@ struct WizardShell: View {
         switch model.step {
         case .usb: model.driveConnected
         case .destination: model.destination != nil
-        case .scope: model.preset != nil
+        case .scope: model.scopeTotal > 0
         default: true
         }
     }
