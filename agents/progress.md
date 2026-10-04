@@ -26,12 +26,22 @@
 
 ### What's In Progress
 
-- [ ] Offload MVP: 7-screen wizard skeleton (placeholders) — grilling session settled the design (`agents/wizard-skeleton-grilling.md`, 14 decisions, all confirmed):
-  - SPM → PhotosExportCore `from: "0.1.0"`; mock at the event level (`MockEngine.exportAssets` mirrors the real signature + a `limit:` param for the "10 recent" preset — documents the engine's missing count-based fetch); swap to real ops = one call site
-  - Screens: Intro (simulated ~2s scan → fictional numbers) · Consent-plan · USB (demo simulate-drive) · Destination (real NSOpenPanel, mkdir mocked) · Scope presets (10 recent / this year / all years, counts shown; custom row disabled "later") · Progress (realistic ~350ms pacing, Cancel-with-confirm, Show in Finder → real temp folder) · Summary (demo delete, Export more = fresh run)
-  - Minimal visuals (style pass later) · Back everywhere except progress/summary · "Step N of 7" indicator
-  - Execution: worker subagent `wizard-skeleton` implementing now → reviewer verifies vs spec → build → user runs E2E via `swift run`
-  - **Standing rule (user-set):** every subagent on this project consults the ponytail skills (`~/repos/ponytail/skills/`) AND the offload `.pi/skills/` — workers get write-swift + swiftui-expert-skill; reviewers get those + ponytail/ponytail-review
+- [x] Offload MVP: 7-screen wizard skeleton (placeholders) — **shipped** (commit `062b1b8`), awaiting the user's E2E click-through
+
+### Wizard skeleton review (2026-10-04)
+
+- Reviewer + ponytail pass on the worker's 563-line skeleton: **FIX-THEN-SHIP**, fixes applied and pushed:
+  - BLOCKER fixed: progress screen was unreachable (startExport never set `.progress`)
+  - Mock now emits engine-faithful 0-based `index` (real-engine swap stays one call site)
+  - ETA = scope estimate (deleted re-derived tick math); `Analysis.gb` Int; ponytail net −14 lines
+  - Worker deviations adjudicated sound (tools 6.0 + `swiftLanguageModes`, allYears `limit`, selectPreset access control)
+  - Placeholder discipline verified: no Photos import, only real touches = NSOpenPanel + Offload-Demo-Export TMPDIR + Show in Finder
+- Standing rule (user-set): subagents consult ponytail skills + offload .pi/skills (workers: write-swift + swiftui-expert-skill; reviewers + ponytail-review)
+- Note: `agents/user-experience.md` deliberately untracked (mirrors PhotosExport's gitignored `.local/` copy); `.build/` gitignored
+
+- [ ] **Next: user runs `swift run` and clicks through all 7 screens E2E** (verify: gates disable Next until drive/folder/preset chosen; USB demo toggle; Start copying → live "Copying N of M" + ETA + Show in Finder; Cancel confirm → back to Scope; Summary + demo delete + Export more → fresh scan)
+
+- [ ] Engine side-quest queue (when real ops land): count/limit-based fetch for "recent N"; photo-count query API; typed metadata at the GUI boundary
 
 ### Review completed (2026-10-04)
 
