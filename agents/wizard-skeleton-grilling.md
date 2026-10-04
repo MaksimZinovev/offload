@@ -52,3 +52,5 @@ A: Name all 5 steps, including "You connect your iPhone via USB": look → conne
 
 ## Q17 — USB screen framing?
 A: "Connect your iPhone with a USB cable." Demo state: "iPhone connected: Dad's iPhone (demo)". Summary reframed to "On iPhone: N photos — unchanged".
+## Q18 — Clarified user-experience.md adjustments (post-E2E)
+A: The clarified doc is authoritative. Screen 2 shows the user's verbatim plan text (connect iPhone → select photos → destination → copy → delete-confirm → nothing deleted). Scope (screen 5) supersedes Q6: [The last 10 photos] preselected default + [This year] + year chips 2026-2023 multi-select + "Number of photos" chips (10/50/100/All), matched count always visible. The iPhone-as-source decision (Q15) is confirmed as the product model.
