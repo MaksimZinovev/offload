@@ -70,3 +70,10 @@ The alternative would be Offload running the `PhotosExport` CLI as a subprocess 
 - Offload's `Package.swift` needs the SPM dependency wired (next: MVP skeleton).
 - PhotosExport needs a **version tag** (`v0.1.0`) so offload can pin a stable release instead of tracking `main` — a one-liner when we wire the dependency.
 - Engine changes (new features, bugfixes) are made in the PhotosExport repo and flow into Offload on the next build; Offload repo only contains app code.
+
+> **API note (2026-10-04, after the subagent review):** the promised engine
+> API shipped in PhotosExport commit `9fadf88` as
+> `exportAssets(_:logger:onEvent:) -> ExportSummary` with an `ExportEvent`
+> enum (`started / assetExported / assetFailed / warning`) — the same contract
+> this ADR described as "`exportNextBatch()` with progress callbacks". Offload
+> consumes the `v0.1.0` tag. `deleteExported()` remains future work (v1.1).

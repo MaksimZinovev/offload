@@ -15,26 +15,34 @@
 - [x] offload repo created: local + public GitHub `MaksimZinovev/offload` (README, .gitignore)
 - [x] App name confirmed: **Offload**
 - [x] Developer ID Application certificate: created via ego-browser (LIFELIKO PTY LTD · W628YFAY45, expires 2031-09-17), imported to login keychain; codesign smoke test passed; backups in `~/.config/offload/signing/`
-- [x] PhotosExportCore refactor (in `MaksimZinovev/PhotosExport`, commit `39d9cb0`): library product split from the CLI; unsafeFlags removed → package importable via SPM; CLI behavior verified identical; CI test workflow added
+- [x] Subagent review of the refactor (two parallel reviewer agents — see "Review completed" below): **FIX-THEN-SHIP**; packaging/CI/behavior solid, consumer contract unfulfilled
+- [x] Engine pass 2 (PhotosExport commits `9fadf88` + `8498931`, pushed; tagged `v0.1.0`):
+  - `exportAssets(_:logger:onEvent:) -> ExportSummary` engine API — the export loop (fetch, dedup, sidecars, error log) moved from CLI into PhotosExportCore; `ExportEvent` (`.started/.assetExported/.assetFailed/.warning`) for live progress; per-asset failures never abort the run; `Task.checkCancellation()` per asset (GUI cancel support)
+  - `YearSelection` enum (`.currentYear/.year/.range`) replaces `yearOverride`+`endYear` optionals — "--end-year requires --year" enforced by the type, force-unwrap gone
+  - Library de-terminaled: `logWarn`/`logError` deleted from Core (warnings are events), `ProgressBar` moved to the executable, duplicate per-resource stderr echoes dropped (error log + code-20 error carry them)
+  - Ponytail: Package.swift −3 lines (default source path; package-level `swiftLanguageModes: [.v5]`)
+  - Entry.swift is a thin adapter — CLI behavior verified identical (bad year / `--end-year` alone / inverted range → same messages, exit 2)
+  - **CI bug found & fixed**: pre-existing ill-typed test assertion (`Character?` vs `String`) had been cratering the CI type checker (both `39d9cb0` runs red, masked as a compiler bug); fixed and green on `8498931`
 
-### What's In Progress
+### Review completed (2026-10-04)
 
-- [ ] Subagent review of the refactor
-  - Details: `@tintinweb/pi-subagents` configured in `offload/.pi/settings.json`, but loads only in sessions started inside `~/repos/offload`; current session is PhotosExport-rooted. Review target: PhotosExport diff `0cc5ee7..39d9cb0`.
-  - Blockers: needs an offload-rooted session (or global package install)
+- [x] Subagent review of the refactor (`0cc5ee7..39d9cb0`) — done in offload-rooted session via `@tintinweb/pi-subagents`
+  - Two parallel `reviewer` agents: correctness/packaging/API (write-swift skill) + ponytail-review
+  - Verdict: **FIX-THEN-SHIP** — packaging/CI/behavior solid; gap was the unfulfilled consumer contract (batch/progress API) → addressed by engine pass 2 above
+  - Ponytail: `net: -3 lines possible` (Package.swift only); rest of the diff lean
+  - Model note: built-in agent types 401 without explicit `model: "glm-5.3-flash:cloud"`; custom types (reviewer/worker/researcher/…) work as-is
 
 ### What's Next
 
-1. Start a session in `~/repos/offload` (loads subagent tools) → delegate the refactor review to a subagent (consult `ponytail` + `.pi/skills/swiftui-expert-skill`, `.pi/skills/write-swift`)
-2. Offload MVP: SwiftUI wizard skeleton — 7 screens per sideshow post `NJ7y-AXh-PY` (v2) — consuming PhotosExportCore via SPM
-3. Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
-4. Notarized public release (blocked on notarization credential, below)
+1. Offload MVP: SwiftUI wizard skeleton — 7 screens per sideshow post `NJ7y-AXh-PY` (v2) — consuming **PhotosExportCore `v0.1.0`** via SPM (`from: "0.1.0"`); engine calls via `exportAssets(_:logger:onEvent:)`; preload `.pi/skills/swiftui-expert-skill` + `write-swift` into implementing agents. Engine side-quests when the wizard needs them: photo-count query ("counts always visible"), typed metadata struct (replaces `[String: Any]` at the GUI boundary)
+2. Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
+3. Notarized public release (blocked on notarization credential, below)
 
 ## Blockers / Risks
 
 - [ ] Notarization credential: App Store Connect API key (preferred) or Apple ID app-specific password — user to provide; blocks the notarized release only, not the family beta
-- [ ] XCTest absent locally (Command Line Tools only; pre-existing, verified against the untouched repo) — tests run in CI (`.github/workflows/test.yml`, first run pending)
-- [ ] Subagent tools need an offload-rooted session (see In Progress)
+- [x] XCTest absent locally (Command Line Tools only) — resolved as a workflow risk: tests run in CI; **CI is green** on `8498931` (first green run; both `39d9cb0` runs were red due to the ill-typed test assertion, since fixed)
+- [x] Subagent tools need an offload-rooted session — resolved (this session); custom agent types work, built-ins need explicit `model: "glm-5.3-flash:cloud"`
 - [ ] Apple membership card on file expired (portal alert) — renewal risk; not blocking current work
 
 ## Decisions Made
@@ -75,6 +83,8 @@ offload repo:
 - Incident log: first `git add -A` briefly committed `.local/user-experience.md` to the public PhotosExport fork; caught within a minute, amended + force-pushed (`39d9cb0` clean); residual orphan commit SHA on GitHub until GC (unreachable without the SHA)
 
 ## Sideshow Reports (session `A6EP5Tpv46g`, localhost:8228)
+
+`sideshow help` - tool for agent-human interactions and artifacts. 
 
 - `BkrW_Z_8UDg` — The engine works — it's just wrapped in a terminal
 - `ZQOaEHNPF2w` — Six traps between a normal person and their photos
