@@ -2,124 +2,107 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-04 18:00 (local)
-**Session:** pi (PhotosExport-rooted) · review surface: sideshow `A6EP5Tpv46g` — "PhotosExport — friendly version" (localhost:8228)
-**Active Feature:** Offload v1 (family beta) — one-button Mac app over PhotosExportCore
+**Last Updated:** 2026-10-04 evening (local)
+**Session:** pi (offload-rooted, `~/repos/offload`) · review surface: sideshow `A6EP5Tpv46g` — "PhotosExport — friendly version" (localhost:8228)
+**Active Feature:** Offload v1 (family beta) — one-button Mac app: iPhone → USB → offload to a destination folder
 
 ## Status
 
 ### What's Done
 
-- [x] Ideation reviewed in sideshow: 3 app kinds — one-button Mac app / menu-bar sync agent / iOS app
-- [x] Direction chosen: **Idea 1 with the redesigned 12-step flow → 7 wizard screens**
-- [x] offload repo created: local + public GitHub `MaksimZinovev/offload` (README, .gitignore)
-- [x] App name confirmed: **Offload**
-- [x] Developer ID Application certificate: created via ego-browser (LIFELIKO PTY LTD · W628YFAY45, expires 2031-09-17), imported to login keychain; codesign smoke test passed; backups in `~/.config/offload/signing/`
-- [x] Subagent review of the refactor (two parallel reviewer agents — see "Review completed" below): **FIX-THEN-SHIP**; packaging/CI/behavior solid, consumer contract unfulfilled
-- [x] Engine pass 2 (PhotosExport commits `9fadf88` + `8498931`, pushed; tagged `v0.1.0`):
-  - `exportAssets(_:logger:onEvent:) -> ExportSummary` engine API — the export loop (fetch, dedup, sidecars, error log) moved from CLI into PhotosExportCore; `ExportEvent` (`.started/.assetExported/.assetFailed/.warning`) for live progress; per-asset failures never abort the run; `Task.checkCancellation()` per asset (GUI cancel support)
-  - `YearSelection` enum (`.currentYear/.year/.range`) replaces `yearOverride`+`endYear` optionals — "--end-year requires --year" enforced by the type, force-unwrap gone
-  - Library de-terminaled: `logWarn`/`logError` deleted from Core (warnings are events), `ProgressBar` moved to the executable, duplicate per-resource stderr echoes dropped (error log + code-20 error carry them)
-  - Ponytail: Package.swift −3 lines (default source path; package-level `swiftLanguageModes: [.v5]`)
-  - Entry.swift is a thin adapter — CLI behavior verified identical (bad year / `--end-year` alone / inverted range → same messages, exit 2)
-  - **CI bug found & fixed**: pre-existing ill-typed test assertion (`Character?` vs `String`) had been cratering the CI type checker (both `39d9cb0` runs red, masked as a compiler bug); fixed and green on `8498931`
+- [x] Ideation + direction: Idea 1 (Offload) with the user's redesigned flow → 7 wizard screens
+- [x] offload repo created (local + public GitHub `MaksimZinovev/offload`)
+- [x] Developer ID Application certificate: LIFELIKO PTY LTD · W628YFAY45 (expires 2031-09-17), in login keychain; backups in `~/.config/offload/signing/`
+- [x] PhotosExportCore library split (`39d9cb0`) + subagent review (verdict FIX-THEN-SHIP) → **engine pass 2** (`9fadf88` + `8498931`):
+  - `exportAssets(_:logger:onEvent:) -> ExportSummary` + `ExportEvent` events; export loop lives in Core, CLI `Entry.swift` is a thin adapter; CLI behavior verified identical
+  - `YearSelection` enum kills the force-unwrap; library de-terminaled (no stderr writers in Core); ponytail −3 lines
+  - **CI green** on `8498931` — the two red `39d9cb0` runs were a pre-existing ill-typed test assertion (masked as a Swift compiler bug), fixed
+  - **Tag `v0.1.0`** on `8498931` — SPM pin for Offload
+- [x] **7-screen wizard skeleton shipped** (offload `062b1b8`, ~630 lines, placeholders everywhere):
+  - Subagent-built ("wizard-skeleton" worker) + subagent-reviewed (reviewer + ponytail): progress screen unreachability BLOCKER + 0-based index fidelity fixed; ponytail net −14
+  - SPM → PhotosExportCore `from: "0.1.0"`; mock at the event level (`MockEngine.exportAssets`, same signature + `limit:`) — real-engine swap = one call site
+  - Placeholder discipline verified: no Photos import; only real touches = NSOpenPanel + TMPDIR demo folder + Show in Finder
+- [x] Bare `swift run` fix (`f846a47`): no-bundle executables launch background-only → window invisible; `.setActivationPolicy(.regular)` in `App.init` — verified rendering
+- [x] **Aligned to clarified user-experience.md** (`f8f9f3d` + `c43e1b9`):
+  - Plan screen (2): user's verbatim plan text (connect iPhone → select photos → destination → copy → delete-confirm → nothing deleted)
+  - USB screen (3): "Connect your iPhone with a USB cable" (demo: "Dad's iPhone")
+  - Scope screen (5): **[The last 10 photos] preselected** + [This year] + year chips 2026-2023 multi-select + "Number of photos" 10/50/100/All chips; matched count + estimate always visible
+  - Summary: "On iPhone: 62,539 photos — unchanged"
 
 ### What's In Progress
 
-- [x] Offload MVP: 7-screen wizard skeleton (placeholders) — **shipped** (commit `062b1b8`), awaiting the user's E2E click-through
+- [ ] **User's second E2E click-through of the adjusted flow** — verdict decides: style pass vs real-ops engine work next
 
-### Wizard skeleton review (2026-10-04)
+### Open design questions / engine side-quests (when real ops land)
 
-- Reviewer + ponytail pass on the worker's 563-line skeleton: **FIX-THEN-SHIP**, fixes applied and pushed:
-  - BLOCKER fixed: progress screen was unreachable (startExport never set `.progress`)
-  - Mock now emits engine-faithful 0-based `index` (real-engine swap stays one call site)
-  - ETA = scope estimate (deleted re-derived tick math); `Analysis.gb` Int; ponytail net −14 lines
-  - Worker deviations adjudicated sound (tools 6.0 + `swiftLanguageModes`, allYears `limit`, selectPreset access control)
-  - Placeholder discipline verified: no Photos import, only real touches = NSOpenPanel + Offload-Demo-Export TMPDIR + Show in Finder
-- Standing rule (user-set): subagents consult ponytail skills + offload .pi/skills (workers: write-swift + swiftui-expert-skill; reviewers + ponytail-review)
-- Note: `agents/user-experience.md` deliberately untracked (mirrors PhotosExport's gitignored `.local/` copy); `.build/` gitignored
-
-- [ ] **Next: user runs `swift run` and clicks through all 7 screens E2E** (verify: gates disable Next until drive/folder/preset chosen; USB demo toggle; Start copying → live "Copying N of M" + ETA + Show in Finder; Cancel confirm → back to Scope; Summary + demo delete + Export more → fresh scan)
-
-- [ ] Engine side-quest queue (when real ops land): **iPhone-as-source — Q15 (2026-10-04) reframe: the photo source is the iPhone, not the Mac Photos library** → direct iPhone access is outside PhotosExportCore's current shape (PHAsset = Mac library); needs ImageCaptureCore (ICCameraDevice) in the engine or an import-first bridge; ALSO open design Q: with iPhone-as-source, when does the analysis (counts) happen — screen 1 precedes the connect step, but an unconnected phone can't be counted (skeleton: fictional numbers, real ops must resolve); count/limit-based fetch for "recent N"; typed metadata at the GUI boundary
-
-### Review completed (2026-10-04)
-
-- [x] Subagent review of the refactor (`0cc5ee7..39d9cb0`) — done in offload-rooted session via `@tintinweb/pi-subagents`
-  - Two parallel `reviewer` agents: correctness/packaging/API (write-swift skill) + ponytail-review
-  - Verdict: **FIX-THEN-SHIP** — packaging/CI/behavior solid; gap was the unfulfilled consumer contract (batch/progress API) → addressed by engine pass 2 above
-  - Ponytail: `net: -3 lines possible` (Package.swift only); rest of the diff lean
-  - Model note: built-in agent types 401 without explicit `model: "glm-5.3-flash:cloud"`; custom types (reviewer/worker/researcher/…) work as-is
+- [ ] **iPhone-as-source (Q15 reframe)**: the photo source is the iPhone, not the Mac Photos library → `PhotosExportCore` reads the Mac library only (PHAsset); direct iPhone access needs **ImageCaptureCore** (ICCameraDevice) in the engine, or an import-first bridge — ADR-level decision pending
+- [ ] Analysis timing with iPhone-as-source: screen 1 (scan/counts) precedes the connect step, but an unconnected phone can't be counted — real ops likely move analysis after connect (needs the user's word)
+- [ ] Count/limit-based fetch for "recent N"; photo-count query API; typed metadata at the GUI boundary (replaces `[String: Any]`)
 
 ### What's Next
 
-1. Offload MVP: SwiftUI wizard skeleton — 7 screens per sideshow post `NJ7y-AXh-PY` (v2) — consuming **PhotosExportCore `v0.1.0`** via SPM (`from: "0.1.0"`); engine calls via `exportAssets(_:logger:onEvent:)`; preload `.pi/skills/swiftui-expert-skill` + `write-swift` into implementing agents. Engine side-quests when the wizard needs them: photo-count query ("counts always visible"), typed metadata struct (replaces `[String: Any]` at the GUI boundary)
-2. Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
-3. Notarized public release (blocked on notarization credential, below)
+1. Style pass (per E2E verdict) — the standing "minimal now, style later" decision
+2. Real-ops engine work (side-quests above), or straight to packaging per user's call
+3. Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
+4. Notarized public release (blocked on notarization credential, below)
 
 ## Blockers / Risks
 
-- [ ] Notarization credential: App Store Connect API key (preferred) or Apple ID app-specific password — user to provide; blocks the notarized release only, not the family beta
-- [x] XCTest absent locally (Command Line Tools only) — resolved as a workflow risk: tests run in CI; **CI is green** on `8498931` (first green run; both `39d9cb0` runs were red due to the ill-typed test assertion, since fixed)
-- [x] Subagent tools need an offload-rooted session — resolved (this session); custom agent types work, built-ins need explicit `model: "glm-5.3-flash:cloud"`
+- [ ] Notarization credential: App Store Connect API key (preferred) or Apple ID app-specific password — user to provide; blocks the notarized release only
 - [ ] Apple membership card on file expired (portal alert) — renewal risk; not blocking current work
+- [ ] Subagent model scope: built-in agent types (Explore/Plan/general-purpose) 401 unless passed `model: "glm-5.3-flash:cloud"` explicitly; custom types (worker/reviewer/researcher/…) are pinned and work — standing rule when spawning subagents
 
 ## Decisions Made
 
-- **Direction — Idea 1 (Offload)** with the user's redesigned flow; Idea 2 (menu-bar agent) parked as v2; Idea 3 (iOS) later bet
-  - Context: sideshow ideation + review; user feedback file `.local/user-experience.md` (PhotosExport, gitignored)
-  - Alternatives: build the menu-bar agent or iOS app first
-- **Engine stays in PhotosExport; Offload consumes PhotosExportCore via SPM**
-  - Context: keeps the fork upstream-mergeable and the CLI as the power-user sibling; zero engine duplication
-  - Alternatives: move/copy the engine into offload — rejected (fork-of-fork divergence, CLI homeless)
-- **Keep JSON metadata + `.plist` edit recipes** (on by default) — earlier cut proposals withdrawn by user decision
-- **Scope default: small batch (10 recent photos), this year** — photo counts always visible (removes the silent-year trap)
-- **Wizard rules:** max 3 attention points per screen · progressive disclosure · confirm before each step · Back everywhere · global progress visible
-- **Delete-exported ships as v1.1** — destructive step after the beta proves exports; leans on 30-day Recently Deleted
-- **unsafeFlags dropped from the PhotosExport package** (they blocked SPM dependency use); CLI `__TEXT` Info.plist embedding removed — TCC still attributes to Terminal (documented flow unchanged)
+- **Direction — Idea 1 (Offload)** with the user's redesigned flow; menu-bar agent parked as v2; iOS later
+- **Engine stays in PhotosExport; Offload consumes PhotosExportCore via SPM** (`from: "0.1.0"`) — keeps the fork upstream-mergeable; zero engine duplication
+- **Photo source is the iPhone** (grilling Q15): user connects iPhone via USB; app copies phone photos to the destination — consequence: engine needs ImageCaptureCore/import-bridge for real ops
+- **Plan screen text is verbatim from user-experience.md** (user wrote the 6-line plan; do not paraphrase)
+- **Scope UI (Q6 superseded by clarified doc)**: "The last 10 photos" preselected default, plus year chips + photos-to-export count control; counts always visible
+- **Placeholders at the event level** (grilling Q1): mock mirrors the real `exportAssets` signature; swap = one call site — no engine protocol abstraction
+- **Minimal visuals now, style pass later** (grilling Q3)
+- **Wizard rules:** max 3 attention points per screen · progressive disclosure · confirm before each step · Back everywhere (except during copy: Cancel-with-confirm) · global "Step N of 7" progress
+- **Delete-exported ships as v1.1** — skeleton shows the permission UI as an inert demo (default off)
+- **Keep JSON metadata + `.plist` edit recipes** (on by default)
 
-## Files Modified This Session
+## Commits This Session
 
-PhotosExport repo (commit `39d9cb0`, pushed to `MaksimZinovev/PhotosExport` main):
-- `Package.swift` — PhotosExportCore library product + executable + test targets; `.swiftLanguageMode(.v5)`
-- `Sources/PhotosExportCore/{Export,Metadata,Utils,Logging,PhotosAccess,Settings}.swift` — moved from `Sources/PhotosExport` + public API surface
-- `Sources/PhotosExport/Entry.swift` — renamed from `main.swift`; imports PhotosExportCore
-- `Tests/PhotosExportTests/PhotosExportTests.swift` — `@testable import PhotosExportCore`
-- `.github/workflows/test.yml` — new; `swift test` on macos-latest
-- `.gitignore` — ignore `.local/`
+PhotosExport (pushed):
+- `9fadf88` — GUI-ready engine API: exportAssets/ExportEvent, YearSelection, de-terminaled Core, thin Entry adapter, Package.swift ponytail
+- `8498931` — CI crater fix (ill-typed test assertion) → **CI green**
+- `v0.1.0` — tag on `8498931`
+- (prior session: `39d9cb0` library split)
 
-offload repo:
-- `README.md` — identity line
-- `.gitignore` — `.DS_Store`, `.local/`
-- `agents/progress.md` — this file
+offload (pushed):
+- `443a44b` — docs: review outcome, ADR-001 API note, `.pi/` gitignored, reusable-pieces exported
+- `062b1b8` — 7-screen wizard skeleton (subagent pair: worker → reviewer+ponytail)
+- `9be1e6f` — chore: `.build/` gitignored, progress log
+- `f846a47` — fix: background-only window on bare `swift run`
+- `f8f9f3d` — feat: clarified UX (iPhone source, plan verbatim, chips scope)
+- `c43e1b9` — docs: grilling Q18
 
 ## Evidence of Completion
 
-- Build: `swift build` → "Build complete!" (both targets)
-- CLI smoke: `swift run PhotosExport --year notayear` → `Invalid arguments: invalidYear("notayear")` + usage + **exit 2** (identical to pre-refactor)
-- XCTest failure proven pre-existing: pristine worktree of the original repo fails `swift test` identically (CLT-only machine)
-- Signing smoke: test binary signed with Developer ID identity, secure timestamp, TeamIdentifier W628YFAY45
-- Incident log: first `git add -A` briefly committed `.local/user-experience.md` to the public PhotosExport fork; caught within a minute, amended + force-pushed (`39d9cb0` clean); residual orphan commit SHA on GitHub until GC (unreachable without the SHA)
+- Engine: `swift build` clean both targets; CLI arg smoke identical (`--year notayear` / `--end-year` alone / inverted range → exit 2); CI green in 45s on macOS runner (37 tests)
+- Skeleton: `swift build` clean; offload binary launches; window renders (screenshot-verified Step 1: step indicator + fictional analysis numbers + Continue)
+- Subagent infra smoke-tested (echo round-trips through worker/reviewer/general-purpose types)
 
 ## Sideshow Reports (session `A6EP5Tpv46g`, localhost:8228)
 
-`sideshow help` - tool for agent-human interactions and artifacts. 
-
 - `BkrW_Z_8UDg` — The engine works — it's just wrapped in a terminal
 - `ZQOaEHNPF2w` — Six traps between a normal person and their photos
-- `NJ7y-AXh-PY` — Idea 1 — PhotosExport.app: the one-button Mac app (v2 = revised 7-screen wizard — the Offload spec)
-- `Gp57VkO4JiI` — Idea 2 — Photos Export Sync: the set-and-forget menu bar
-- `Y8slOzhZC2M` — Idea 3 — Phone to Drive: an iOS app, no Mac at all
-- `D1iRER7L8wI` — Decision record — Idea 1 with your redesigned flow (v2)
-- `maKjCdLY3xU` — From design to GitHub release — the concrete path (v3 = prerequisites table)
-- `BfKHSunOgJE` — Reusable pieces from your GitHub stars (v2 = mac list)
-- `mh2Lxz4xBh0` — Next steps — offload (checkpoint comments: cert done, refactor done)
+- `NJ7y-AXh-PY` — Idea 1 (v2 = the 7-screen wizard spec)
+- `D1iRER7L8wI` — Decision record — Idea 1 with your redesigned flow
+- `maKjCdLY3xU` — From design to GitHub release (v3 = prerequisites table)
+- `BfKHSunOgJE` — Reusable pieces from your GitHub stars
+- `mh2Lxz4xBh0` — Next steps — offload
+- Checkpoints this session: `glHpUDfTmgw` (engine pass 2 done, v0.1.0) · `yb4b70Y8Pbg` (skeleton shipped) · `XX3HFwO3NBs` (clarified-UX alignment)
 
 ## Notes for Next Session
 
-- Start pi **inside `~/repos/offload`** so `@tintinweb/pi-subagents` loads; its tools are absent from PhotosExport-rooted sessions
-- First task there: subagent review of the PhotosExport refactor (`git diff 0cc5ee7..39d9cb0`), ponytail + offload skills consulted
-- PhotosExport has **no tags yet** — the SPM dependency needs `branch: "main"` or tag `v0.1.0` first (recommend tagging)
-- Wizard spec: sideshow post `NJ7y-AXh-PY` v2; user feedback source of truth: `PhotosExport/.local/user-experience.md`
+- Start pi **inside `~/repos/offload`** (subagent tools load there)
+- **Subagent standing rule (user-set):** consult ponytail skills (`~/repos/ponytail/skills/`) + offload `.pi/skills/` — workers: write-swift + swiftui-expert-skill; reviewers: those + ponytail-review; built-in types need `model: "glm-5.3-flash:cloud"`
+- User feedback source of truth: `offload/agents/user-experience.md` (deliberately untracked); grilling decision log: `agents/wizard-skeleton-grilling.md` (Q1-Q18)
+- Groomed Qs awaiting user: analysis-timing with iPhone source; style pass scope
 - Still owed by user: notarization credential (ASC API key preferred)
-- Keep posting checkpoints to sideshow session `A6EP5Tpv46g` and arm the `sideshow wait` loop
+- Keep posting checkpoints to sideshow `A6EP5Tpv46g`; disk space is tight (~13Gi) — `swift package clean` before big builds if ENOSPC recurs
