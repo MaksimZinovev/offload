@@ -14,7 +14,7 @@ struct ScopeView: View {
             Toggle("The last 10 photos", isOn: latestBinding)
             Toggle("This year", isOn: yearBinding(WizardModel.currentYear))
             ForEach([2025, 2024, 2023], id: \.self) { year in
-                Toggle("\(year)", isOn: yearBinding(year))
+                Toggle(String(year), isOn: yearBinding(year))
             }
             Text("≈ \(model.scopeTotal.formatted()) photos · est ~\(model.estimatedMinutes) min")
                 .foregroundStyle(.secondary)

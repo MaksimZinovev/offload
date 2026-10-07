@@ -159,12 +159,17 @@ struct ConnectedDevicesLine: View {
 
 /// The unfolded per-device details (simulated whole-library stats, fictional).
 struct DeviceDetailsRows: View {
+    // String(year) — LocalizedStringKey would locale-format plain Ints ("2,018–2,026").
+    private var yearRangeText: String {
+        "\(String(WizardModel.deviceYearRange.lowerBound))–\(String(WizardModel.deviceYearRange.upperBound))"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("\(WizardModel.devicePhotos.formatted()) photos")
             Text("\(WizardModel.deviceVideos.formatted()) videos")
             Text("\(WizardModel.deviceSizeGB) GB total size")
-            Text("\(WizardModel.deviceYearRange.lowerBound)–\(WizardModel.deviceYearRange.upperBound) date range")
+            Text("\(yearRangeText) date range")
             Text("≈ \(WizardModel.deviceExportMinutes) mins estimated export time")
         }
         .font(.callout)

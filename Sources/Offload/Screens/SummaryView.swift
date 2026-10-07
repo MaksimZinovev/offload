@@ -13,7 +13,7 @@ struct SummaryView: View {
         if case .finished(let summary) = model.run {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("On iPhone: \(totalPhotoCount.formatted()) photos — unchanged")
+                    Text("On iPhone: \(WizardModel.devicePhotos.formatted()) photos — unchanged")
                     Text("Exported: \(summary.exported.formatted()) to \(destinationText)")
                 }
                 Divider()
@@ -41,8 +41,4 @@ struct SummaryView: View {
         model.exportTargetURL.map(WizardModel.displayPath) ?? "?"
     }
 
-    /// Fictional total: the sum of the per-year counts.
-    private var totalPhotoCount: Int {
-        WizardModel.yearCounts.values.reduce(0, +)
-    }
 }
