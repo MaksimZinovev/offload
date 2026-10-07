@@ -31,7 +31,13 @@
 
 ### What's In Progress
 
-- [ ] **User's second E2E click-through of the adjusted flow** — verdict decides: style pass vs real-ops engine work next
+- [x] **tldraw-mockup implementation COMPLETE** — alpha (coms peer) implemented all 5 checkpoints + destination hotfix; pi-main verified each (build + screenshot + diff) and committed:
+  - CP1 `26d58ed` chrome+model (pips header, ConnectedDevicesLine widget, mockup step map, analysis fiction → device details)
+  - hotfix+CP2 `831a4c4` — user-caught `…/Offload//Offload` double-append fixed (base/target split + displayPath); WelcomeView + NextStepsView (verbatim checklist)
+  - CP3 `543efe1` ConnectDeviceView (both-way demo toggle, reserved visual box) · CP4 `73e6d66` checkbox select screen · CP5 `9a0d054` nits (String(year) locale-format fix incl. date-range twin found in audit) + devicePhotos single-source
+  - Final E2E screenshot sweep green: all 7 steps match mockups; gate + cancel flows verified
+- [ ] **User's final E2E click-through** — verdict decides: style pass vs real-ops engine work next
+- Collaboration facts: alpha = coms peer (UI/frontend, glm-5.3-flash:cloud) on hub `~/.pi/coms-net/projects/default` (port from server.json) — my session tools need direct registration `pi-main` + 5s heartbeats (scripts: /tmp/coms-{heartbeat,inbox}.sh, die on reboot/timeout); alpha replies via hub even though its UI label said "no peers connected" (stale label, do not trust it)
 
 ### Open design questions / engine side-quests (when real ops land)
 
