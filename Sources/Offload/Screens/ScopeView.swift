@@ -1,42 +1,40 @@
 import SwiftUI
 
-/// Screen 5 — selection. Checkbox layout per mockup lands at CP4; chips keep
-/// the screen working with the new independent-selection model in the
-/// meantime (2026 is "This year", not a separate chip).
+/// Screen 5 — "What photos do you want to copy?": independent checkboxes per
+/// the mockup (chips + count-cap UI dropped; the model keeps `exportCount`,
+/// unwired, for the real-ops cap). Counts + estimate always live below;
+/// footer's "Clear selection" empties everything and Continue disables on an
+/// empty selection.
 struct ScopeView: View {
     @ObservedObject var model: WizardModel
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 8) {
-                chip("The last 10 photos", selected: model.latestSelected) {
-                    model.setLatestSelected(!model.latestSelected)
-                }
-                chip("This year", selected: model.selectedYears.contains(WizardModel.currentYear)) {
-                    model.toggleYear(WizardModel.currentYear)
-                }
-            }
-            HStack(spacing: 8) {
-                ForEach([2025, 2024, 2023], id: \.self) { year in
-                    chip("\(year)", selected: model.selectedYears.contains(year)) {
-                        model.toggleYear(year)
-                    }
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            Text("What photos do you want to copy?")
+            Toggle("The last 10 photos", isOn: latestBinding)
+            Toggle("This year", isOn: yearBinding(WizardModel.currentYear))
+            ForEach([2025, 2024, 2023], id: \.self) { year in
+                Toggle("\(year)", isOn: yearBinding(year))
             }
             Text("≈ \(model.scopeTotal.formatted()) photos · est ~\(model.estimatedMinutes) min")
+                .foregroundStyle(.secondary)
+                .padding(.top, 8)
         }
     }
 
-    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            action()
-        } label: {
-            Text(title)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(selected ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12))
-                .cornerRadius(8)
-        }
-        .buttonStyle(.plain)
+    /// "The last 10 photos" — preselected default, user-uncheckable.
+    private var latestBinding: Binding<Bool> {
+        Binding(
+            get: { model.latestSelected },
+            set: { model.setLatestSelected($0) }
+        )
+    }
+
+    /// A year checkbox ("This year" is simply the current year's row).
+    private func yearBinding(_ year: Int) -> Binding<Bool> {
+        Binding(
+            get: { model.selectedYears.contains(year) },
+            set: { _ in model.toggleYear(year) }
+        )
     }
 }
