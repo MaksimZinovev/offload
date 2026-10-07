@@ -66,7 +66,7 @@ struct WizardShell: View {
         switch model.step {
         case .welcome: WelcomeView(model: model)
         case .nextSteps: NextStepsView(model: model)
-        case .connectDevice: UsbView(model: model)
+        case .connectDevice: ConnectDeviceView(model: model)
         case .destination: DestinationView(model: model)
         case .photos: ScopeView(model: model)
         case .progress: ExportProgressView(model: model)
