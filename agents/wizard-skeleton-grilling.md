@@ -54,3 +54,9 @@ A: Name all 5 steps, including "You connect your iPhone via USB": look → conne
 A: "Connect your iPhone with a USB cable." Demo state: "iPhone connected: Dad's iPhone (demo)". Summary reframed to "On iPhone: N photos — unchanged".
 ## Q18 — Clarified user-experience.md adjustments (post-E2E)
 A: The clarified doc is authoritative. Screen 2 shows the user's verbatim plan text (connect iPhone → select photos → destination → copy → delete-confirm → nothing deleted). Scope (screen 5) supersedes Q6: [The last 10 photos] preselected default + [This year] + year chips 2026-2023 multi-select + "Number of photos" chips (10/50/100/All), matched count always visible. The iPhone-as-source decision (Q15) is confirmed as the product model.
+
+## Q19 — tldraw mockup round (offload.tldraw, 8 frames)
+A: Mockups restructure the wizard. Confirmed by user:
+- New 7-step map: 1 Welcome (Connected devices list + unfoldable device details: n photos/l videos/m total size/yyyy-yyyy range/z mins) · 2 Next steps (plan as system-driven checklist — item 1 auto-ticks when connected) · 3 Connect device (demo "Connected - test it", right-side placeholder reserved for a connection visual) · 4 Destination folder (suggested default path in grey, "Choose folder…" demo button, Continue enabled — default counts as set) · 5 Photo selection (checkboxes, "last 10" preselected + uncheckable, selection may be empty → Continue disabled; footer gains Clear selection) · 6 Copying (current design, restyled) · 7 Summary (current design, restyled)
+- Header: "Step N of 7 - <title>" + 7 square pips right, filled through the current step; compact "Connected devices:" line (dot + name + unfold) persists top-left on steps 2+
+- Old standalone analysis screen is replaced: device details carry n/l/m/yyyy-yyyy/z
