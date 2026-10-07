@@ -10,12 +10,7 @@ import PhotosExportCore
 @MainActor
 final class WizardModel: ObservableObject {
     enum Step: Int {
-        case intro = 1, consent, usb, destination, scope, progress, summary
-    }
-
-    enum Analysis: Equatable {
-        case scanning
-        case done(photos: Int, gb: Int, minutes: Int)
+        case welcome = 1, nextSteps, connectDevice, destination, photos, progress, summary
     }
 
     enum RunState {
@@ -24,82 +19,75 @@ final class WizardModel: ObservableObject {
         case finished(ExportSummary)
     }
 
-    @Published private(set) var step: Step = .intro
-    @Published private(set) var analysis: Analysis = .scanning
-    @Published var driveConnected = false
-    @Published var destination: URL?
-    // Scope (screen 5): "The last 10 photos" is the preselected small-batch
-    // default; year chips + export count refine it (per user-experience.md).
+    @Published private(set) var step: Step = .welcome
+    @Published var deviceConnected = false
+    /// Default destination counts as chosen (grilling Q19) — never nil in practice.
+    @Published var destination: URL? = WizardModel.defaultDestination
+    // Screen 5: independent checkboxes. "The last 10 photos" is the
+    // preselected default; "This year" is selectedYears = [currentYear].
     @Published private(set) var latestSelected = true
     @Published private(set) var selectedYears: Set<Int> = []
+    /// No UI on the mockup's checkbox screen (the 10/50/100/All chips were
+    /// dropped); kept per confirmed plan for the real-ops count cap.
     @Published private(set) var exportCount: Int? = 10
     @Published private(set) var run: RunState = .idle
 
-    /// Fictional per-year library counts (sums to 62,539 = "all years").
+    /// Fictional per-year photo counts. All four sum to 62,539 — the same
+    /// whole-device total the Summary shows.
     static let yearCounts: [Int: Int] = [2026: 4_812, 2025: 11_234, 2024: 18_976, 2023: 27_517]
     static let currentYear = 2026
 
-    // MARK: - Scope (screen 5)
+    // MARK: - Device (simulated; the unfolded details rows)
 
-    func selectLatest() {
-        latestSelected = true
-        selectedYears = []
+    static let deviceName = "iPhone 13 Pro"
+    static var devicePhotos: Int { yearCounts.values.reduce(0, +) } // 62,539 — stays consistent with yearCounts
+    static let deviceVideos = 1_842
+    static let deviceSizeGB = 84
+    static let deviceYearRange = 2018 ... 2026
+    /// ~540 photos/min, rounded up (same rate as the scope estimate).
+    static var deviceExportMinutes: Int { exportMinutes(for: devicePhotos) }
+
+    /// Demo default (agreed): ~/Downloads/Offload, shown home-relative.
+    static let defaultDestination = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Downloads", isDirectory: true)
+        .appendingPathComponent("Offload", isDirectory: true)
+
+    // MARK: - Selection (screen 5)
+
+    func setLatestSelected(_ on: Bool) {
+        latestSelected = on
     }
 
-    func selectThisYear() {
-        latestSelected = false
-        selectedYears = [Self.currentYear]
-    }
-
+    /// Independent checkbox semantics — year checks leave the last-10 box alone.
     func toggleYear(_ year: Int) {
-        latestSelected = false
         if !selectedYears.insert(year).inserted {
             selectedYears.remove(year)
         }
     }
 
-    /// Number of photos to export; nil = All.
-    func setExportCount(_ count: Int?) {
-        exportCount = count
+    /// Footer's "Clear selection": everything off (Continue disables on empty).
+    func clearSelection() {
+        latestSelected = false
+        selectedYears = []
     }
 
-    /// Photos the current scope matches (fictional).
+    /// Photos the current selection matches (fictional; sums the checked boxes).
     var scopeTotal: Int {
-        if latestSelected { return 10 }
-        let yearsSum = selectedYears.reduce(0) { $0 + (Self.yearCounts[$1] ?? 0) }
-        return exportCount.map { min($0, yearsSum) } ?? yearsSum
+        (latestSelected ? 10 : 0) + selectedYears.reduce(0) { $0 + (Self.yearCounts[$1] ?? 0) }
     }
 
     /// ~540 photos/min, rounded up.
-    var estimatedMinutes: Int {
-        max(1, Int((Double(scopeTotal) / 540).rounded(.up)))
-    }
+    var estimatedMinutes: Int { Self.exportMinutes(for: scopeTotal) }
 
-    private var scanTask: Task<Void, Never>?
-    private var exportTask: Task<Void, Never>?
-
-    init() {
-        beginAnalysis()
-    }
-
-    // MARK: - Analysis (screen 1)
-
-    /// Simulated library scan: ~2s spinner, then fictional numbers.
-    func beginAnalysis() {
-        scanTask?.cancel()
-        analysis = .scanning
-        scanTask = Task {
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            analysis = .done(photos: 4812, gb: 38, minutes: 9)
-        }
+    static func exportMinutes(for photos: Int) -> Int {
+        max(1, Int((Double(photos) / 540).rounded(.up)))
     }
 
     // MARK: - Navigation
 
     var canGoBack: Bool {
         switch step {
-        case .intro, .progress, .summary: false
+        case .welcome, .progress, .summary: false
         default: true
         }
     }
@@ -111,11 +99,10 @@ final class WizardModel: ObservableObject {
 
     /// Continue on the current step. Gates mirror the per-screen button
     /// disabling; the button is the primary gate, this guards behind it.
+    /// Destination has no gate — the default counts as chosen (Q19).
     func next() {
         switch step {
-        case .usb: guard driveConnected else { return }
-        case .destination: guard destination != nil else { return }
-        case .scope: guard scopeTotal > 0 else { return }
+        case .connectDevice: guard deviceConnected else { return }
         default: break
         }
         guard let nextStep = Step(rawValue: step.rawValue + 1) else { return }
@@ -154,9 +141,9 @@ final class WizardModel: ObservableObject {
                 run = .finished(summary)
                 step = .summary
             } catch {
-                // Cancellation (or a fatal mock error) returns to the scope step.
+                // Cancellation (or a fatal mock error) returns to the selection step.
                 run = .idle
-                step = .scope
+                step = .photos
             }
         }
     }
@@ -177,21 +164,23 @@ final class WizardModel: ObservableObject {
         }
     }
 
-    /// Progress screen's ETA: the scope estimate (fictional; no own pacing
+    /// Progress screen's ETA: the selection estimate (fictional; no own pacing
     /// model in the mock).
     var etaMinutes: Int { estimatedMinutes }
 
     // MARK: - Fresh run (after summary)
 
-    /// "Export more": full reset to a fresh run — re-scan, nothing kept.
+    /// "Export more": full reset to a fresh run — defaults restored, back to
+    /// Welcome (nothing kept).
     func exportMore() {
         exportTask?.cancel()
         run = .idle
-        selectLatest()
-        exportCount = 10
-        destination = nil
-        driveConnected = false
-        step = .intro
-        beginAnalysis()
+        latestSelected = true
+        selectedYears = []
+        destination = Self.defaultDestination
+        deviceConnected = false
+        step = .welcome
     }
+
+    private var exportTask: Task<Void, Never>?
 }
