@@ -1,19 +1,23 @@
 import SwiftUI
 import AppKit
 
-/// Screen 4 — the one real system picker. Displays (only) that Offload
-/// would create a subfolder; no directory is actually created.
+/// Screen 4 — the one real system picker. The default (~/Downloads) counts
+/// as chosen; the app creates `<base>/Offload` — offload target shown below.
 struct DestinationView: View {
     @ObservedObject var model: WizardModel
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Where should the copies go?")
+            Text("Where should the copied photos be saved?")
             Button("Choose folder…") { chooseFolder() }
-            if let destination = model.destination {
-                Text("Offload will create: \(destination.path(percentEncoded: false))/Offload")
-            } else {
-                Text("No folder chosen yet.")
+            if let target = model.exportTargetURL {
+                if model.destination == WizardModel.defaultDestination {
+                    // Mockup: the suggested default in grey.
+                    Text("Save in folder: \(WizardModel.homeRelativePath(target))")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Will create: \(WizardModel.displayPath(target))")
+                }
             }
         }
     }

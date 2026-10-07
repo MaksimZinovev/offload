@@ -64,8 +64,8 @@ struct WizardShell: View {
     @ViewBuilder
     private var screen: some View {
         switch model.step {
-        case .welcome: IntroView()
-        case .nextSteps: ConsentView()
+        case .welcome: WelcomeView(model: model)
+        case .nextSteps: NextStepsView(model: model)
         case .connectDevice: UsbView(model: model)
         case .destination: DestinationView(model: model)
         case .photos: ScopeView(model: model)

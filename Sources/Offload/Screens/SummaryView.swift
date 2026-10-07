@@ -38,8 +38,7 @@ struct SummaryView: View {
     }
 
     private var destinationText: String {
-        let base = model.destination?.path(percentEncoded: false) ?? "?"
-        return base + "/Offload"
+        model.exportTargetURL.map(WizardModel.displayPath) ?? "?"
     }
 
     /// Fictional total: the sum of the per-year counts.

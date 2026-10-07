@@ -47,10 +47,30 @@ final class WizardModel: ObservableObject {
     /// ~540 photos/min, rounded up (same rate as the scope estimate).
     static var deviceExportMinutes: Int { exportMinutes(for: devicePhotos) }
 
-    /// Demo default (agreed): ~/Downloads/Offload, shown home-relative.
+    /// Demo default (agreed): ~/Downloads — the picked BASE folder; the app
+    /// creates `<base>/Offload` (grilling model), see `exportTargetURL`.
     static let defaultDestination = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Downloads", isDirectory: true)
-        .appendingPathComponent("Offload", isDirectory: true)
+
+    /// The copy target: `<picked base>/Offload` — derived (nil-safe), never stored.
+    var exportTargetURL: URL? { destination?.appendingPathComponent("Offload") }
+
+    /// Path text without a trailing slash (URLs of directory targets keep one).
+    static func displayPath(_ url: URL) -> String {
+        var path = url.path(percentEncoded: false)
+        while path.count > 1 && path.hasSuffix("/") { path.removeLast() }
+        return path
+    }
+
+    /// Path text abbreviated under the home directory (for the suggested default).
+    static func homeRelativePath(_ url: URL) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        var path = displayPath(url)
+        if path.hasPrefix(home) {
+            path = "~" + path.dropFirst(home.count)
+        }
+        return path
+    }
 
     // MARK: - Selection (screen 5)
 
