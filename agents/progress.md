@@ -2,7 +2,7 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-04 evening (local)
+**Last Updated:** 2026-10-11 evening (local)
 **Session:** pi (offload-rooted, `~/repos/offload`) · review surface: sideshow `A6EP5Tpv46g` — "PhotosExport — friendly version" (localhost:8228)
 **Active Feature:** Offload v1 (family beta) — one-button Mac app: iPhone → USB → offload to a destination folder
 
@@ -51,6 +51,13 @@
 2. Real-ops engine work (side-quests above), or straight to packaging per user's call
 3. Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
 4. Notarized public release (blocked on notarization credential, below)
+
+### Real-engine launch notes (IE2, 2026-10-11)
+
+- Real-engine launch (`OFFLOAD_ENGINE=real`, assemble via `scripts/make-app.sh` → `.build/Offload.app`) requires a **bundle identity**: a bare `swift run` binary sits outside any bundle and PhotoKit fetch comes back authorized-but-empty on this macOS (the IE1 TCC saga). A terminal already holding a Photos grant works without the bundle, but the bundle is the supported path.
+- The engine sees the **system photo library** — the designation in Photos.app settings is what PhotoKit reads; a secondary library reads as empty.
+- Estimates stay fictional (`yearCounts`) in real mode until the fiction→real bridge iteration (count-based fetch) — do not rewire here.
+- IE2 also pinned `exportBase` to the product target: engine output lands at `<picked>/Offload/YYYY/MM`, matching the app's displayed destination (Q19).
 
 ## Blockers / Risks
 

@@ -54,6 +54,7 @@ final class WizardModel: ObservableObject {
         .appendingPathComponent("Downloads", isDirectory: true)
 
     /// The copy target: `<picked base>/Offload` — derived (nil-safe), never stored.
+    /// In real mode this is the engine's exportBase (the engine writes <target>/YYYY/MM).
     var exportTargetURL: URL? { destination?.appendingPathComponent("Offload") }
 
     /// Path text without a trailing slash (URLs of directory targets keep one).
@@ -139,7 +140,7 @@ final class WizardModel: ObservableObject {
         ProcessInfo.processInfo.environment["OFFLOAD_ENGINE"] == "real"
 
     func startExport() {
-        guard let destination, case .idle = run, scopeTotal > 0 else { return }
+        guard case .idle = run, scopeTotal > 0, let exportBase = exportTargetURL else { return }
         step = .progress
         let selection: YearSelection
         if latestSelected {
@@ -158,10 +159,12 @@ final class WizardModel: ObservableObject {
                 return
             }
         }
-        // The real engine takes no `limit`; the mock uses it to know the
-        // displayed total (see MockEngine). OFFLOAD_ENGINE=real swaps the mock
-        // for the real engine; the event mapping and catch are shared.
-        let request = ExportRequest(exportBase: destination, selection: selection)
+        // The engine writes <exportBase>/YYYY/MM, so exportBase is the product
+        // target <picked>/Offload (Q19, derived) — not the picked base; the mock
+        // ignores the path. The real engine takes no `limit` (the mock uses it
+        // for the displayed total, see MockEngine). OFFLOAD_ENGINE=real swaps
+        // the mock for the real engine; the event mapping and catch are shared.
+        let request = ExportRequest(exportBase: exportBase, selection: selection)
         exportTask = Task {
             do {
                 let summary: ExportSummary

@@ -15,7 +15,10 @@ let package = Package(
             name: "Offload",
             dependencies: [
                 .product(name: "PhotosExportCore", package: "PhotosExport")
-            ]
+            ],
+            // The app bundle's Info.plist (see scripts/make-app.sh);
+            // SwiftPM must not treat it as a resource (same as PhotosExport).
+            exclude: ["Info.plist"]
         )
     ],
     swiftLanguageModes: [.v5]
