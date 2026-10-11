@@ -2,123 +2,77 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-11 evening (local)
+**Last Updated:** 2026-10-11 late evening (local)
 **Session:** pi (offload-rooted, `~/repos/offload`) · review surface: sideshow `A6EP5Tpv46g` — "PhotosExport — friendly version" (localhost:8228)
 **Active Feature:** Offload v1 (family beta) — one-button Mac app: iPhone → USB → offload to a destination folder
+**Iteration mode:** alpha implements (coms peer on the coms-net hub) → pi-main verifies (build + screenshots + diff) → commits → acks next brief
 
 ## Status
 
-### What's Done
+### What's Done (chronological)
 
 - [x] Ideation + direction: Idea 1 (Offload) with the user's redesigned flow → 7 wizard screens
-- [x] offload repo created (local + public GitHub `MaksimZinovev/offload`)
-- [x] Developer ID Application certificate: LIFELIKO PTY LTD · W628YFAY45 (expires 2031-09-17), in login keychain; backups in `~/.config/offload/signing/`
-- [x] PhotosExportCore library split (`39d9cb0`) + subagent review (verdict FIX-THEN-SHIP) → **engine pass 2** (`9fadf88` + `8498931`):
-  - `exportAssets(_:logger:onEvent:) -> ExportSummary` + `ExportEvent` events; export loop lives in Core, CLI `Entry.swift` is a thin adapter; CLI behavior verified identical
-  - `YearSelection` enum kills the force-unwrap; library de-terminaled (no stderr writers in Core); ponytail −3 lines
-  - **CI green** on `8498931` — the two red `39d9cb0` runs were a pre-existing ill-typed test assertion (masked as a Swift compiler bug), fixed
-  - **Tag `v0.1.0`** on `8498931` — SPM pin for Offload
-- [x] **7-screen wizard skeleton shipped** (offload `062b1b8`, ~630 lines, placeholders everywhere):
-  - Subagent-built ("wizard-skeleton" worker) + subagent-reviewed (reviewer + ponytail): progress screen unreachability BLOCKER + 0-based index fidelity fixed; ponytail net −14
-  - SPM → PhotosExportCore `from: "0.1.0"`; mock at the event level (`MockEngine.exportAssets`, same signature + `limit:`) — real-engine swap = one call site
-  - Placeholder discipline verified: no Photos import; only real touches = NSOpenPanel + TMPDIR demo folder + Show in Finder
-- [x] Bare `swift run` fix (`f846a47`): no-bundle executables launch background-only → window invisible; `.setActivationPolicy(.regular)` in `App.init` — verified rendering
-- [x] **Aligned to clarified user-experience.md** (`f8f9f3d` + `c43e1b9`):
-  - Plan screen (2): user's verbatim plan text (connect iPhone → select photos → destination → copy → delete-confirm → nothing deleted)
-  - USB screen (3): "Connect your iPhone with a USB cable" (demo: "Dad's iPhone")
-  - Scope screen (5): **[The last 10 photos] preselected** + [This year] + year chips 2026-2023 multi-select + "Number of photos" 10/50/100/All chips; matched count + estimate always visible
-  - Summary: "On iPhone: 62,539 photos — unchanged"
+- [x] offload repo (local + GitHub `MaksimZinovev/offload`); PhotosExportCore split + **engine pass 2** (`9fadf88`+`8498931`, tag `v0.1.0`, CI green)
+- [x] 7-screen wizard skeleton (`062b1b8`) + bare-`swift run` window fix (`f846a47`); clarified-UX alignment (`f8f9f3d`,`c43e1b9`); grilling log Q1–Q19 (`50c17c6`)
+- [x] **tldraw-mockup implementation COMPLETE** — alpha implemented 5 checkpoints + the user-caught destination hotfix; pi-main verified (build + screenshot + diff) each and committed:
+  - CP1 `26d58ed` chrome+model · hotfix+CP2 `831a4c4` (`…/Offload//Offload` double-append fixed at root: base/target split + displayPath) · CP3 `543efe1` ConnectDeviceView · CP4 `73e6d66` checkbox select screen · CP5 `9a0d054` String(year) locale-format fix (+ twin found in audit) + devicePhotos single-source
+  - Final E2E screenshot sweep green; pips/gates/cancel/Back verified
+- [x] **"It actually exports" (IE1 `0bc3efa` + IE2 `020b911`)** — real PhotosExportCore engine behind `OFFLOAD_ENGINE=real` (default mock); `OFFLOAD_ENGINE` env gate at the single call site; output at `<picked>/Offload/YYYY/MM` (exportBase = exportTargetURL, Q19); `Sources/Offload/Info.plist` + `scripts/make-app.sh` for bundle identity. LIVE-verified by user twice: 15 assets, 481 MB, .plist sidecars, Live Photo pairs, zero failures
+- [x] **IC1: real iPhone discovery (`f2abf3c`)** — `OFFLOAD_DEVICE=real`: ICDeviceBrowser + open session in DeviceSource (only ImageCaptureCore import in the target); Welcome line = real device name ("mangoPhone M3🥭") + real 2,020 photos/405 videos (= ICC probe ground truth 2,425; one batch + `deviceDidBecomeReady(withCompleteContentCatalog:)`). Demo toggle hidden in real mode; non-derivable stats hidden (never fabricated); mock mode byte-for-byte
+- [x] User verified: system photo library re-designated to the 12 GB real library (was stuck on the empty natalia library — even Photos.app read as empty)
 
-### What's Done (recent)
+### In flight
 
-- [x] **IC1: real iPhone discovery COMPLETE (`f2abf3c`)** — `OFFLOAD_DEVICE=real`: ICDeviceBrowser + open session; Welcome line = REAL device name ("mangoPhone M3🥭") + real 2,020 photos/405 videos (matches ICC probe ground-truth 2,425, one batch + catalogComplete). `import ImageCaptureCore` confined to DeviceSource.swift. Debug findings on record: this SDK HAS `ICCameraDevice.mediaFiles` (an incremental ptpObjectHandle dict would collapse items — deleted); locked phone → session error -9943 "Please unlock" but cached catalog still arrives (breadcrumb for IC2).
+- [ ] **IC2: real iPhone DOWNLOAD (device → `<picked>/Offload/YYYY/MM`)** — brief sent to alpha (msg `01M4NGR22WZ9BNT16JKH3HE4TK`): ICC requestDownload per wizard selection; selection semantics: "The last 10 photos" = 10 most-recent-by-captureDate (documented deviation replacing the currentYear approximation for device source), years = captureDate-in-year; same event stream (started/assetExported) so screens 6–7 unchanged; call site becomes 3-way (device download → real engine → mock); unlock handling: -9943 → clean failure back to .photos with breadcrumb
+- Awaiting alpha's "IC2 done"; then my statics + user's live plug test + commit
 
-- [x] **"It actually exports" COMPLETE (IE1 `0bc3efa` + IE2 `020b911`)** — real engine behind `OFFLOAD_ENGINE=real` (default stays mock): env-var switch at the single call site; real output at `<picked>/Offload/YYYY/MM`; `Sources/Offload/Info.plist` + `scripts/make-app.sh` give the app a bundle identity. LIVE-VERIFIED twice by user: 15 real assets, 481 MB, .plist sidecars, Live Photo pairs, zero failures.
-- [x] **tldraw-mockup implementation COMPLETE** — alpha (coms peer) implemented all 5 checkpoints + destination hotfix; pi-main verified each (build + screenshot + diff) and committed:
-  - CP1 `26d58ed` chrome+model (pips header, ConnectedDevicesLine widget, mockup step map, analysis fiction → device details)
-  - hotfix+CP2 `831a4c4` — user-caught `…/Offload//Offload` double-append fixed (base/target split + displayPath); WelcomeView + NextStepsView (verbatim checklist)
-  - CP3 `543efe1` ConnectDeviceView (both-way demo toggle, reserved visual box) · CP4 `73e6d66` checkbox select screen · CP5 `9a0d054` nits (String(year) locale-format fix incl. date-range twin found in audit) + devicePhotos single-source
-  - Final E2E screenshot sweep green: all 7 steps match mockups; gate + cancel flows verified
-- [ ] **User's final E2E click-through** — verdict decides: style pass vs real-ops engine work next
-- Collaboration facts: alpha = coms peer (UI/frontend, glm-5.3-flash:cloud) on hub `~/.pi/coms-net/projects/default` (port from server.json) — my session tools need direct registration `pi-main` + 5s heartbeats (scripts: /tmp/coms-{heartbeat,inbox}.sh, die on reboot/timeout); alpha replies via hub even though its UI label said "no peers connected" (stale label, do not trust it)
+### Open design questions / side-quests
 
-### Open design questions / engine side-quests (when real ops land)
+- [ ] **Fiction→real bridge**: estimate lines still show fictional `yearCounts` (18,976 etc.) — real numbers only appear at Copying; bridge = real library counts in the UI (needs an analysis step design; on-device counts now live via DeviceSource)
+- [ ] Count/limit-based fetch for the MAC-engine mode ("recent N" — engine side-quest, low priority now that device mode exists)
+- [ ] Style pass (per user's call; screens verified mockup-faithful)
+- [ ] Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
+- [ ] Notarized public release (blocked on credential, below)
 
-- [ ] **iPhone-as-source (Q15 reframe)**: the photo source is the iPhone, not the Mac Photos library → `PhotosExportCore` reads the Mac library only (PHAsset); direct iPhone access needs **ImageCaptureCore** (ICCameraDevice) in the engine, or an import-first bridge — ADR-level decision pending
-- [ ] Analysis timing with iPhone-as-source: screen 1 (scan/counts) precedes the connect step, but an unconnected phone can't be counted — real ops likely move analysis after connect (needs the user's word)
-- [ ] Count/limit-based fetch for "recent N"; photo-count query API; typed metadata at the GUI boundary (replaces `[String: Any]`)
+## Platform facts on record (verified live, 2026-10-11)
 
-### What's Next
-
-1. Style pass (per E2E verdict) — the standing "minimal now, style later" decision
-2. Real-ops engine work (side-quests above), or straight to packaging per user's call
-3. Family beta DMG: Makefile `.app` assembly + ad-hoc codesign + `hdiutil` → GitHub Release draft (no Apple credentials needed)
-4. Notarized public release (blocked on notarization credential, below)
-
-### Real-engine launch notes (IE2, 2026-10-11)
-
-- Real-engine launch (`OFFLOAD_ENGINE=real`, assemble via `scripts/make-app.sh` → `.build/Offload.app`) requires a **bundle identity**: a bare `swift run` binary sits outside any bundle and PhotoKit fetch comes back authorized-but-empty on this macOS (the IE1 TCC saga). A terminal already holding a Photos grant works without the bundle, but the bundle is the supported path.
-- The engine sees the **system photo library** — the designation in Photos.app settings is what PhotoKit reads; a secondary library reads as empty.
-- Estimates stay fictional (`yearCounts`) in real mode until the fiction→real bridge iteration (count-based fetch) — do not rewire here.
-- IE2 also pinned `exportBase` to the product target: engine output lands at `<picked>/Offload/YYYY/MM`, matching the app's displayed destination (Q19).
+- **Real-engine launch**: needs a **bundle identity** — bare `swift run` binary → PhotoKit fetch returns authorized-but-empty, silently, no prompt (IE1 saga). `scripts/make-app.sh` assembles `.build/Offload.app`; launch its inner binary with `OFFLOAD_ENGINE=real`. A terminal already holding the Photos grant also works.
+- **PhotoKit sees the system photo library only** — designation lives in Photos.app → Settings → General ("Use as System Photo Library" greyed = it already IS the designated one). The 12 GB "Photos Library.photoslibrary" was NOT designated (natalia-photos was); re-designated by user → engine + CLI + probe all read 772 real assets (2016:1, 2018:5, 2024:15, 2025:752).
+- **ICC on this SDK**: `ICCameraDevice.mediaFiles` EXISTS (readonly array; header line 164) — an incremental item-keyed dict collapsed items (ptpObjectHandle values not unique at didAdd time → 2,425 became "1"); counts come from mediaFiles walks at publish boundaries only.
+- **ICC + locked phone**: session open errors `-9943 "Please unlock …"` but the cached catalog still arrives; downloads will need the unlocked state (IC2 breadcrumb). No phone-side prompt appeared in the IC1 test (device already trusted from prior Image-Capture/Photos workflows).
+- TCC/PhotoKit debugging recipe: instrumented probe CLI in a throwaway `.app` bundle prints bundle_id/authStatus/fetch-count — the fastest ground-truth check.
 
 ## Blockers / Risks
 
 - [ ] Notarization credential: App Store Connect API key (preferred) or Apple ID app-specific password — user to provide; blocks the notarized release only
-- [ ] Apple membership card on file expired (portal alert) — renewal risk; not blocking current work
-- [ ] Subagent model scope: built-in agent types (Explore/Plan/general-purpose) 401 unless passed `model: "glm-5.3-flash:cloud"` explicitly; custom types (worker/reviewer/researcher/…) are pinned and work — standing rule when spawning subagents
+- [ ] Subagent model scope: built-in agent types (Explore/Plan/general-purpose) 401 unless passed `model: "glm-5.3-flash:cloud"` explicitly — standing rule
+- [ ] Disk space tight (~13Gi) — `swift package clean` before big builds if ENOSPC recurs
 
 ## Decisions Made
 
-- **Direction — Idea 1 (Offload)** with the user's redesigned flow; menu-bar agent parked as v2; iOS later
-- **Engine stays in PhotosExport; Offload consumes PhotosExportCore via SPM** (`from: "0.1.0"`) — keeps the fork upstream-mergeable; zero engine duplication
-- **Photo source is the iPhone** (grilling Q15): user connects iPhone via USB; app copies phone photos to the destination — consequence: engine needs ImageCaptureCore/import-bridge for real ops
-- **Plan screen text is verbatim from user-experience.md** (user wrote the 6-line plan; do not paraphrase)
-- **Scope UI (Q6 superseded by clarified doc)**: "The last 10 photos" preselected default, plus year chips + photos-to-export count control; counts always visible
-- **Placeholders at the event level** (grilling Q1): mock mirrors the real `exportAssets` signature; swap = one call site — no engine protocol abstraction
-- **Minimal visuals now, style pass later** (grilling Q3)
-- **Wizard rules:** max 3 attention points per screen · progressive disclosure · confirm before each step · Back everywhere (except during copy: Cancel-with-confirm) · global "Step N of 7" progress
-- **Delete-exported ships as v1.1** — skeleton shows the permission UI as an inert demo (default off)
-- **Keep JSON metadata + `.plist` edit recipes** (on by default)
+- **Direction — Idea 1 (Offload)**; engine stays in PhotosExport (SPM `from: "0.1.0"`), Offload consumes PhotosExportCore
+- **Photo source is the iPhone** (Q15) → ImageCaptureCore app-layer side; Mac-library engine stays (the user's own CLI use case)
+- **Env-gate pattern** for real/placeholder: `OFFLOAD_ENGINE=real` (engine), `OFFLOAD_DEVICE=real` (device) — default = today's mock, byte-for-byte
+- **Mockups are the newest source of truth** (supersede older doc/grill wording): device name fiction "iPhone 13 Pro" only in mock mode; screens 6–7 designs kept; "≈" marks estimates only (documented convention)
+- **Plan screen text is verbatim** from user-experience.md (never paraphrase)
+- **Placeholder discipline**: no Photos import ever; ImageCaptureCore only in DeviceSource.swift; real touches: NSOpenPanel, TMPDIR demo folder, Show in Finder, ICC browser/session (IC1+)
+- **Delete-exported ships as v1.1** — wizard shows the permission UI inert (default off)
+- **Minimal visuals now, style pass later** (Q3); verbatim plan + gates + Back + "Step N of 7"
 
-## Commits This Session
+## Commits This Session (offload, all pushed)
 
-PhotosExport (pushed):
-- `9fadf88` — GUI-ready engine API: exportAssets/ExportEvent, YearSelection, de-terminaled Core, thin Entry adapter, Package.swift ponytail
-- `8498931` — CI crater fix (ill-typed test assertion) → **CI green**
-- `v0.1.0` — tag on `8498931`
-- (prior session: `39d9cb0` library split)
+`26d58ed` CP1 · `831a4c4` hotfix+CP2 · `543efe1` CP3 · `73e6d66` CP4 · `9a0d054` CP5 · `50c17c6` Q19 · `ece700f` progress · `0bc3efa` IE1 · `020b911` IE2 · `f2abf3c` IC1 (+ docs commits)
 
-offload (pushed):
-- `443a44b` — docs: review outcome, ADR-001 API note, `.pi/` gitignored, reusable-pieces exported
-- `062b1b8` — 7-screen wizard skeleton (subagent pair: worker → reviewer+ponytail)
-- `9be1e6f` — chore: `.build/` gitignored, progress log
-- `f846a47` — fix: background-only window on bare `swift run`
-- `f8f9f3d` — feat: clarified UX (iPhone source, plan verbatim, chips scope)
-- `c43e1b9` — docs: grilling Q18
+## Sideshow (session `A6EP5Tpv46g`, localhost:8228)
 
-## Evidence of Completion
-
-- Engine: `swift build` clean both targets; CLI arg smoke identical (`--year notayear` / `--end-year` alone / inverted range → exit 2); CI green in 45s on macOS runner (37 tests)
-- Skeleton: `swift build` clean; offload binary launches; window renders (screenshot-verified Step 1: step indicator + fictional analysis numbers + Continue)
-- Subagent infra smoke-tested (echo round-trips through worker/reviewer/general-purpose types)
-
-## Sideshow Reports (session `A6EP5Tpv46g`, localhost:8228)
-
-- `BkrW_Z_8UDg` — The engine works — it's just wrapped in a terminal
-- `ZQOaEHNPF2w` — Six traps between a normal person and their photos
-- `NJ7y-AXh-PY` — Idea 1 (v2 = the 7-screen wizard spec)
-- `D1iRER7L8wI` — Decision record — Idea 1 with your redesigned flow
-- `maKjCdLY3xU` — From design to GitHub release (v3 = prerequisites table)
-- `BfKHSunOgJE` — Reusable pieces from your GitHub stars
-- `mh2Lxz4xBh0` — Next steps — offload
-- Checkpoints this session: `glHpUDfTmgw` (engine pass 2 done, v0.1.0) · `yb4b70Y8Pbg` (skeleton shipped) · `XX3HFwO3NBs` (clarified-UX alignment)
+- Reports: `BkrW_Z_8UDg` engine/terminal · `ZQOaEHNPF2w` six traps · `NJ7y-AXh-PY` wizard spec · `D1iRER7L8wI` decision record · `maKjCdLY3xU` release prereqs · `BfKHSunOgJE` reusable pieces · `mh2Lxz4xBh0` next steps
+- Checkpoints: `glHpUDfTmgw` engine pass 2 · `yb4b70Y8Pbg` skeleton · `XX3HFwO3NBs` clarified-UX · `WQIsWGkGzUA` mockup implementation complete · `tyk3ZyDs6Ds` "It actually exports" verified
 
 ## Notes for Next Session
 
-- Start pi **inside `~/repos/offload`** (subagent tools load there)
-- **Subagent standing rule (user-set):** consult ponytail skills (`~/repos/ponytail/skills/`) + offload `.pi/skills/` — workers: write-swift + swiftui-expert-skill; reviewers: those + ponytail-review; built-in types need `model: "glm-5.3-flash:cloud"`
-- User feedback source of truth: `offload/agents/user-experience.md` (deliberately untracked); grilling decision log: `agents/wizard-skeleton-grilling.md` (Q1-Q18)
-- Groomed Qs awaiting user: analysis-timing with iPhone source; style pass scope
+- **Coms plumbing (current truth)**: hub = `scripts/coms-net-server.ts` from `~/repos/pi-vs-claude-code` (restarts with sessions — port moves); the `coms_net_*` session tools abstract it (list/send/get/await — **use them, not curl**; register/heartbeat scripts and /tmp files are GONE). Alpha sessions are long-lived; turns take ~1–15 min (up to 2h on heavy turns); await-endpoint hiccups ("fetch failed") → re-poll with `coms_net_get`.
+- Alpha standing rule (user-set): skills first — `~/repos/ponytail/skills/` (ponytail.md + write-swift.md) then offload `.pi/skills/` (swiftui-expert-skill + write-swift); STOP-and-ask on major issues; implement only, never commit; reply "CP/IE/ICn done: <what>" and wait.
+- User feedback source of truth: `agents/user-experience.md` (untracked — exclude via `':!agents/user-experience.md'` in git add -A); grilling log `agents/wizard-skeleton-grilling.md` (Q1–Q19)
+- Awaiting: alpha IC2 → user live download test (phone plugged + UNLOCKED)
 - Still owed by user: notarization credential (ASC API key preferred)
-- Keep posting checkpoints to sideshow `A6EP5Tpv46g`; disk space is tight (~13Gi) — `swift package clean` before big builds if ENOSPC recurs
+- Keep posting checkpoints to sideshow `A6EP5Tpv46g`
