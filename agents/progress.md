@@ -23,8 +23,8 @@
 
 ### In flight
 
-- [ ] **IC2: real iPhone DOWNLOAD (device → `<picked>/Offload/YYYY/MM`)** — brief sent to alpha (msg `01M4NGR22WZ9BNT16JKH3HE4TK`): ICC requestDownload per wizard selection; selection semantics: "The last 10 photos" = 10 most-recent-by-captureDate (documented deviation replacing the currentYear approximation for device source), years = captureDate-in-year; same event stream (started/assetExported) so screens 6–7 unchanged; call site becomes 3-way (device download → real engine → mock); unlock handling: -9943 → clean failure back to .photos with breadcrumb
-- Awaiting alpha's "IC2 done"; then my statics + user's live plug test + commit
+- [x] **IC2: real iPhone download COMPLETE (`c664a5a`)** — per-item `ICCameraFile.requestDownload(options:completion:)`, sequential AsyncStream drive loop (late completions discarded, zero continuation misuse); selection: last-10 = 10 most-recent-by-captureDate (documented deviation, device path), years = captureDate-in-year, audio filtered, no-date items skipped; same event stream (screens 6–7 unchanged); 3-way call site (device → engine → mock, Q15 precedence); -9943 locked phone → clean cancel. **LIVE-VERIFIED by user: phone → `<picked>/Offload` through all 7 screens.**
+- [x] README quickstart + dev commands + troubleshooting (`61a8468`) — stale-bundle lesson documented: after code changes re-run `sh scripts/make-app.sh`
 
 ### Open design questions / side-quests
 
@@ -76,3 +76,7 @@
 - Awaiting: alpha IC2 → user live download test (phone plugged + UNLOCKED)
 - Still owed by user: notarization credential (ASC API key preferred)
 - Keep posting checkpoints to sideshow `A6EP5Tpv46g`
+
+## Roadmap 
+
+- [ ] add prompt on iPhone to unlock device, confirm connection to app
