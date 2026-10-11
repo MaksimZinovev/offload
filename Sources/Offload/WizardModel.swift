@@ -6,7 +6,8 @@ import PhotosExportCore
 ///
 /// Types consumed from PhotosExportCore (ExportEvent, ExportRequest,
 /// ExportSummary, YearSelection, LineLogger) are the real engine's types;
-/// only the event source is fake (see MockEngine).
+/// the event source is the mock by default (see MockEngine;
+/// `OFFLOAD_ENGINE=real` runs the real engine instead).
 @MainActor
 final class WizardModel: ObservableObject {
     enum Step: Int {
@@ -131,13 +132,21 @@ final class WizardModel: ObservableObject {
 
     // MARK: - Export (screens 5-7)
 
+    /// Engine switch: `OFFLOAD_ENGINE=real` runs the real engine; unset or any
+    /// other value keeps the mock, so plain `swift run` behaves exactly as
+    /// before. Read once, at first export.
+    private static let usesRealEngine =
+        ProcessInfo.processInfo.environment["OFFLOAD_ENGINE"] == "real"
+
     func startExport() {
         guard let destination, case .idle = run, scopeTotal > 0 else { return }
         step = .progress
         let selection: YearSelection
         if latestSelected {
             // The latest 10 — a count-based fetch the real engine grows later;
-            // the mock treats .currentYear as "whatever the wizard showed".
+            // .currentYear is the documented approximation (whole current year,
+            // real mode included). The mock treats .currentYear as
+            // "whatever the wizard showed".
             selection = .currentYear
         } else {
             let years = selectedYears.sorted()
@@ -149,19 +158,26 @@ final class WizardModel: ObservableObject {
                 return
             }
         }
-        // The real engine will take no `limit`; the mock uses it to know the
-        // displayed total (see MockEngine). This is the one call site to
-        // change when swapping in the real engine.
+        // The real engine takes no `limit`; the mock uses it to know the
+        // displayed total (see MockEngine). OFFLOAD_ENGINE=real swaps the mock
+        // for the real engine; the event mapping and catch are shared.
         let request = ExportRequest(exportBase: destination, selection: selection)
         exportTask = Task {
             do {
-                let summary = try await MockEngine.exportAssets(request, limit: scopeTotal) { [weak self] event in
-                    self?.handleEvent(event)
+                let summary: ExportSummary
+                if Self.usesRealEngine {
+                    summary = try await PhotosExportCore.exportAssets(request) { [weak self] event in
+                        self?.handleEvent(event)
+                    }
+                } else {
+                    summary = try await MockEngine.exportAssets(request, limit: scopeTotal) { [weak self] event in
+                        self?.handleEvent(event)
+                    }
                 }
                 run = .finished(summary)
                 step = .summary
             } catch {
-                // Cancellation (or a fatal mock error) returns to the selection step.
+                // Cancellation (or a fatal engine error) returns to the selection step.
                 run = .idle
                 step = .photos
             }
@@ -180,7 +196,7 @@ final class WizardModel: ObservableObject {
             // The engine emits 0-based indices; `done` is 1-based.
             run = .running(done: index + 1, total: total)
         case .assetFailed, .warning:
-            break
+            break // by design (mock included): the run continues; ExportSummary carries the numbers
         }
     }
 
