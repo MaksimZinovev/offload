@@ -228,6 +228,32 @@ final class DeviceSource: NSObject, ObservableObject {
         )
     }
 
+    // MARK: - Selection count (FB1: real numbers on the estimate line)
+
+    /// Live-catalog count for a screen-5 selection — the estimator-side
+    /// mirror of the IC2 download prep (same walk: photo/video media only,
+    /// missing creation date skipped, never crash). Pull-style: the model
+    /// calls this on need (a ~2.4K-item walk is bounded; no new publishes).
+    /// Catalog 0/incomplete shows the live count as-is — never a placeholder.
+    func selectionCount(for selection: DeviceSelection) -> Int {
+        guard let camera, camera.hasOpenSession, let mediaFiles = camera.mediaFiles else { return 0 }
+        let calendar = Calendar.current
+        var eligibleDates: [Date] = []
+        for item in mediaFiles {
+            guard let file = item as? ICCameraFile, let date = file.creationDate,
+                  Self.itemKind(item) != .other else { continue }
+            eligibleDates.append(date)
+        }
+        switch selection {
+        case .latest(let count):
+            // N most recent by capture date → min(N, eligible).
+            return min(count, eligibleDates.count)
+        case .years(let years):
+            let yearSet = Set(years)
+            return eligibleDates.filter { yearSet.contains(calendar.component(.year, from: $0)) }.count
+        }
+    }
+
     /// ICC callbacks arrive off-main; all state above is main-actor.
     private nonisolated static func onMain(_ body: @escaping @MainActor () -> Void) {
         if Thread.isMainThread {

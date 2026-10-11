@@ -39,6 +39,10 @@ final class WizardModel: ObservableObject {
     /// dropped); kept per confirmed plan for the real-ops count cap.
     @Published private(set) var exportCount: Int? = 10
     @Published private(set) var run: RunState = .idle
+    /// The estimate frozen at run start (FB1.1) — the progress ETA reads
+    /// this, not the live scope walk (no O(n²) main-thread re-walk per
+    /// transfer tick, and no live-count drift mid-run).
+    private(set) var runEstimateMinutes = 0
 
     /// Fictional per-year photo counts. All four sum to 62,539 — the same
     /// whole-device total the Summary shows.
@@ -144,12 +148,25 @@ final class WizardModel: ObservableObject {
         selectedYears = []
     }
 
-    /// Photos the current selection matches (fictional; sums the checked boxes).
+    /// Photos the current selection matches.
+    /// - Real-device mode (OFFLOAD_DEVICE=real): the LIVE phone-catalog count
+    ///   (DeviceSource.selectionCount — same walk semantics as the IC2
+    ///   download prep). Catalog mid-enumeration shows the live count as-is
+    ///   (possibly 0 → Continue stays disabled). Empty selection → 0.
+    /// - Real-engine mode (OFFLOAD_ENGINE=real, Mac libraries): STILL the
+    ///   fictional yearCounts — an engine-side count API is the later
+    ///   bridge; no PHAsset fetches are invented here.
     var scopeTotal: Int {
-        (latestSelected ? 10 : 0) + selectedYears.reduce(0) { $0 + (Self.yearCounts[$1] ?? 0) }
+        if Self.usesRealDevice, let source = deviceSource {
+            return source.selectionCount(
+                for: latestSelected ? DeviceSelection.latest(exportCount ?? 10) : .years(selectedYears.sorted())
+            )
+        }
+        return (latestSelected ? 10 : 0) + selectedYears.reduce(0) { $0 + (Self.yearCounts[$1] ?? 0) }
     }
 
-    /// ~540 photos/min, rounded up.
+    /// ~540 photos/min, rounded up — the transfer-rate fiction stays for
+    /// now; in real-device mode the SCALE it applies to is the real count.
     var estimatedMinutes: Int { Self.exportMinutes(for: scopeTotal) }
 
     static func exportMinutes(for photos: Int) -> Int {
@@ -217,6 +234,9 @@ final class WizardModel: ObservableObject {
         // recent items by capture date (real device semantics; supersedes the
         // .currentYear approximation for the device path only).
         let request = ExportRequest(exportBase: exportBase, selection: selection)
+        // Freeze the progress ETA once per run (FB1.1): one scope walk here,
+        // not one per transfer tick. Same number outside device mode anyway.
+        runEstimateMinutes = estimatedMinutes
         exportTask = Task {
             do {
                 let summary: ExportSummary
@@ -262,9 +282,17 @@ final class WizardModel: ObservableObject {
         }
     }
 
-    /// Progress screen's ETA: the selection estimate (fictional; no own pacing
-    /// model in the mock).
-    var etaMinutes: Int { estimatedMinutes }
+    /// Progress screen's ETA: the selection estimate frozen at run start
+    /// (FB1.1: per-tick re-renders read the stored capture — no per-item
+    /// catalog walk on main, and the number can't drift mid-run). Idle
+    /// falls back to the live computed estimate (no own pacing model; the
+    /// rate-fiction note above applies).
+    var etaMinutes: Int {
+        switch run {
+        case .idle: estimatedMinutes
+        case .running, .finished: runEstimateMinutes
+        }
+    }
 
     // MARK: - Fresh run (after summary)
 
