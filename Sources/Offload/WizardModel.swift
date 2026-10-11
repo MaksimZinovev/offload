@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import PhotosExportCore
 
@@ -22,6 +23,12 @@ final class WizardModel: ObservableObject {
 
     @Published private(set) var step: Step = .welcome
     @Published var deviceConnected = false
+    /// Real-mode mirrors of DeviceSource's snapshot; mock mode never touches
+    /// these (the name stays the fiction default, counts stay 0).
+    @Published private(set) var deviceName = WizardModel.fictionDeviceName
+    @Published private(set) var deviceItemCount = 0
+    @Published private(set) var devicePhotoCount = 0
+    @Published private(set) var deviceVideoCount = 0
     /// Default destination counts as chosen (grilling Q19) — never nil in practice.
     @Published var destination: URL? = WizardModel.defaultDestination
     // Screen 5: independent checkboxes. "The last 10 photos" is the
@@ -38,9 +45,53 @@ final class WizardModel: ObservableObject {
     static let yearCounts: [Int: Int] = [2026: 4_812, 2025: 11_234, 2024: 18_976, 2023: 27_517]
     static let currentYear = 2026
 
-    // MARK: - Device (simulated; the unfolded details rows)
+    // MARK: - Device (OFFLOAD_DEVICE=real: live browser truth; demo fiction otherwise)
 
-    static let deviceName = "iPhone 13 Pro"
+    /// Mirrors the engine gate: OFFLOAD_DEVICE=real runs the live
+    /// ICDeviceBrowser (DeviceSource); anything else/absent keeps the demo
+    /// toggle fiction byte-for-byte.
+    static let usesRealDevice =
+        ProcessInfo.processInfo.environment["OFFLOAD_DEVICE"] == "real"
+
+    /// The demo (fiction) device name.
+    static let fictionDeviceName = "iPhone 13 Pro"
+
+    /// Real device plumbing (real mode only; nil otherwise): one browser
+    /// started at init, reused across "Export more" restarts, stopped at
+    /// deinit (no leak between wizard restarts).
+    private let deviceSource: DeviceSource?
+    private var deviceCancellable: AnyCancellable?
+
+    init() {
+        if Self.usesRealDevice {
+            let source = DeviceSource()
+            deviceSource = source
+            deviceCancellable = source.$snapshot.sink { [weak self] in
+                self?.applyDeviceSnapshot($0)
+            }
+            source.start()
+        } else {
+            deviceSource = nil
+        }
+    }
+
+    deinit {
+        // Nonisolated cleanup; the model deinits on the main thread
+        // (@StateObject teardown), so the isolated hop below is safe.
+        MainActor.assumeIsolated {
+            deviceSource?.stop()
+        }
+    }
+
+    /// Mirror the browser snapshot into the chrome fields (the sink exists
+    /// only in real mode).
+    private func applyDeviceSnapshot(_ snap: DeviceSnapshot) {
+        deviceConnected = snap.connected
+        if let name = snap.deviceName, !name.isEmpty { deviceName = name }
+        deviceItemCount = snap.itemCount
+        devicePhotoCount = snap.photoCount
+        deviceVideoCount = snap.videoCount
+    }
     static var devicePhotos: Int { yearCounts.values.reduce(0, +) } // 62,539 — stays consistent with yearCounts
     static let deviceVideos = 1_842
     static let deviceSizeGB = 84
@@ -217,7 +268,10 @@ final class WizardModel: ObservableObject {
         latestSelected = true
         selectedYears = []
         destination = Self.defaultDestination
-        deviceConnected = false
+        if !Self.usesRealDevice {
+            // Real phone stays connected — the browser keeps the truth.
+            deviceConnected = false
+        }
         step = .welcome
     }
 

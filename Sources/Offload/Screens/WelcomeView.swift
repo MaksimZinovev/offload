@@ -11,7 +11,7 @@ struct WelcomeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Text("Connected devices: \(model.deviceConnected ? WizardModel.deviceName : "none")")
+                Text("Connected devices: \(model.deviceConnected ? model.deviceName : "none")")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 if model.deviceConnected {
@@ -27,7 +27,7 @@ struct WelcomeView: View {
                 }
             }
             if model.deviceConnected, detailsUnfolded {
-                DeviceDetailsRows()
+                DeviceDetailsRows(model: model)
                     .padding(.leading, 16)
             }
         }

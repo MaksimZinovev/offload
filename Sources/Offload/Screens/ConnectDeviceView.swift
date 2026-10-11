@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Screen 3 — connect device: instruction + demo toggle (both ways) at left,
-/// right-side box reserved for the future connection visual (empty styled
-/// box for now). Continue is gated on the device being connected.
+/// Screen 3 — connect device: instruction at left (real mode adds nothing —
+/// the demo toggle is hidden behind OFFLOAD_DEVICE=real, the live browser is
+/// the truth), right-side box reserved for the future connection visual
+/// (empty styled box for now). Continue is gated on the device being connected.
 struct ConnectDeviceView: View {
     @ObservedObject var model: WizardModel
 
@@ -10,9 +11,11 @@ struct ConnectDeviceView: View {
         HStack(alignment: .center, spacing: 24) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Connect your iPhone and Mac with a USB cable.")
-                // Demo-only simulated device; the whole wizard mirrors it live.
-                Button(model.deviceConnected ? "Remove it (demo)" : "Connected - test it") {
-                    model.deviceConnected.toggle()
+                if !WizardModel.usesRealDevice {
+                    // Demo-only simulated device; the whole wizard mirrors it live.
+                    Button(model.deviceConnected ? "Remove it (demo)" : "Connected - test it") {
+                        model.deviceConnected.toggle()
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

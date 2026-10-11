@@ -134,7 +134,7 @@ struct ConnectedDevicesLine: View {
                     .accessibilityHidden(true)
                 Text("Connected devices:")
                     .foregroundStyle(.secondary)
-                Text(model.deviceConnected ? WizardModel.deviceName : "none")
+                Text(model.deviceConnected ? model.deviceName : "none")
                     .foregroundStyle(.secondary)
                 if model.deviceConnected {
                     Button {
@@ -150,15 +150,20 @@ struct ConnectedDevicesLine: View {
             }
             .font(.callout)
             if model.deviceConnected, unfolded {
-                DeviceDetailsRows()
+                DeviceDetailsRows(model: model)
                     .padding(.leading, 14)
             }
         }
     }
 }
 
-/// The unfolded per-device details (simulated whole-library stats, fictional).
+/// The unfolded per-device details: fictional demo stats, except under
+/// OFFLOAD_DEVICE=real where only derivable real counts are shown — stats
+/// that cannot be derived for free (GB size, year range, ETA) are hidden,
+/// not fabricated.
 struct DeviceDetailsRows: View {
+    @ObservedObject var model: WizardModel
+
     // String(year) — LocalizedStringKey would locale-format plain Ints ("2,018–2,026").
     private var yearRangeText: String {
         "\(String(WizardModel.deviceYearRange.lowerBound))–\(String(WizardModel.deviceYearRange.upperBound))"
@@ -166,11 +171,20 @@ struct DeviceDetailsRows: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("\(WizardModel.devicePhotos.formatted()) photos")
-            Text("\(WizardModel.deviceVideos.formatted()) videos")
-            Text("\(WizardModel.deviceSizeGB) GB total size")
-            Text("\(yearRangeText) date range")
-            Text("≈ \(WizardModel.deviceExportMinutes) mins estimated export time")
+            if WizardModel.usesRealDevice {
+                // Item count 0 also covers "connected, still enumerating" —
+                // nothing is invented meanwhile.
+                if model.deviceItemCount > 0 {
+                    Text("\(model.devicePhotoCount.formatted()) photos")
+                    Text("\(model.deviceVideoCount.formatted()) videos")
+                }
+            } else {
+                Text("\(WizardModel.devicePhotos.formatted()) photos")
+                Text("\(WizardModel.deviceVideos.formatted()) videos")
+                Text("\(WizardModel.deviceSizeGB) GB total size")
+                Text("\(yearRangeText) date range")
+                Text("≈ \(WizardModel.deviceExportMinutes) mins estimated export time")
+            }
         }
         .font(.callout)
         .foregroundStyle(.secondary)
