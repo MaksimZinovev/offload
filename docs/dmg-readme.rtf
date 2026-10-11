@@ -1,0 +1,39 @@
+{\rtf1\ansi\ansicpg1252\deff0
+{\fonttbl{\f0\fswiss\fcharset0 Helvetica;}}
+\margl1440\margr1440\margt1440\margb1440
+
+\pard\sb100\sa200\f0\fs36\b Offload\par
+
+\pard\sa200\fs22\b0
+Copies the photos and videos you pick from your iPhone to this Mac, organized in Year/Month folders.\par
+Keeps the camera's original filenames; Live Photo pairs (photo + .mov) travel together.\par
+Nothing is ever deleted from your phone.\par
+
+\pard\sb100\sa200\fs26\b Getting started\par
+
+\pard\sa200\fs22\b0
+1. Drag Offload.app to your Applications folder.\par
+2. Launch it, pick a folder, choose photos, export. Files land inside an "Offload" subfolder of the folder you picked.\par
+
+\pard\sb100\sa200\fs26\b If macOS blocks the first launch\par
+
+\pard\sa200\fs22\b0
+The beta is not notarized, so Gatekeeper may refuse it. Right-click Offload.app, choose Open, then Open again in the dialog.\par
+If it still refuses, run this once in Terminal (point it at wherever the app is):\par
+
+\pard\li1440\sa200\f1\fs20
+xattr -dr com.apple.quarantine /path/to/Offload.app\par
+
+\pard\sb100\sa200\fs26\b Exporting from your iPhone\par
+
+\pard\sa200\fs22\b0
+Plug the phone in and keep it unlocked; approve the trust prompt if one appears. Downloads run one file at a time; leave the app open until the summary screen.\par
+
+\pard\sb100\sa200\fs26\b Beta note\par
+
+\pard\sa200\fs22\b0
+Double-clicking the app currently starts with a built-in demo device. To transfer from your real iPhone today, run this instead:\par
+
+\pard\li1440\sa200\f1\fs20
+OFFLOAD_DEVICE=real /Applications/Offload.app/Contents/MacOS/Offload\par
+}
