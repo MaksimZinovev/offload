@@ -212,14 +212,22 @@ final class WizardModel: ObservableObject {
         }
         // The engine writes <exportBase>/YYYY/MM, so exportBase is the product
         // target <picked>/Offload (Q19, derived) — not the picked base; the mock
-        // ignores the path. The real engine takes no `limit` (the mock uses it
-        // for the displayed total, see MockEngine). OFFLOAD_ENGINE=real swaps
-        // the mock for the real engine; the event mapping and catch are shared.
+        // ignores the path. Device mode (OFFLOAD_DEVICE=real) downloads from
+        // the live phone instead — its .latest choice maps to the N most
+        // recent items by capture date (real device semantics; supersedes the
+        // .currentYear approximation for the device path only).
         let request = ExportRequest(exportBase: exportBase, selection: selection)
         exportTask = Task {
             do {
                 let summary: ExportSummary
-                if Self.usesRealEngine {
+                if Self.usesRealDevice, let source = deviceSource {
+                    summary = try await source.download(
+                        selection: latestSelected ? DeviceSelection.latest(exportCount ?? 10) : .years(selectedYears.sorted()),
+                        target: exportBase
+                    ) { [weak self] event in
+                        self?.handleEvent(event)
+                    }
+                } else if Self.usesRealEngine {
                     summary = try await PhotosExportCore.exportAssets(request) { [weak self] event in
                         self?.handleEvent(event)
                     }
@@ -250,7 +258,7 @@ final class WizardModel: ObservableObject {
             // The engine emits 0-based indices; `done` is 1-based.
             run = .running(done: index + 1, total: total)
         case .assetFailed, .warning:
-            break // by design (mock included): the run continues; ExportSummary carries the numbers
+            break // by design (mock, device, engine alike): the run continues; ExportSummary carries the numbers
         }
     }
 

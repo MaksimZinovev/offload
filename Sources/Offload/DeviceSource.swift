@@ -1,5 +1,6 @@
 import Foundation
 import ImageCaptureCore
+import PhotosExportCore
 import UniformTypeIdentifiers
 
 /// One device seen through the ImageCaptureCore browser — the wizard's
@@ -32,6 +33,9 @@ final class DeviceSource: NSObject, ObservableObject {
 
     private var browser: ICDeviceBrowser?
     private var camera: ICCameraDevice?
+    /// Completion outlet of the live download run (nil between runs); the
+    /// download loop consumes it, and teardown/removal finish() it.
+    private var downloadStream: AsyncStream<DownloadResult>.Continuation?
 
     private enum ItemKind { case photo, video, other }
 
@@ -57,6 +61,8 @@ final class DeviceSource: NSObject, ObservableObject {
         camera = nil
         browser?.stop()
         browser = nil
+        downloadStream?.finish() // aborts a run in progress
+        downloadStream = nil
         snapshot = DeviceSnapshot()
     }
 
@@ -73,6 +79,8 @@ final class DeviceSource: NSObject, ObservableObject {
     private func cameraRemoved(_ device: ICDevice) {
         guard camera != nil, device === camera else { return }
         camera = nil
+        downloadStream?.finish() // a run in progress aborts with its stream
+        downloadStream = nil
         publishSnapshot()
     }
 
@@ -101,6 +109,123 @@ final class DeviceSource: NSObject, ObservableObject {
             }
         }
         snapshot = snap
+    }
+
+    // MARK: - Download (IC2: real device source)
+
+    /// Downloads the selection into `target/YYYY/MM` (capture date, native
+    /// camera filenames) and drives the wizard's existing event stream.
+    /// Sequential: one ICC transfer in flight, next issued on completion —
+    /// ICC serializes over USB anyway; abort/cancellation stay trivial.
+    func download(
+        selection: DeviceSelection,
+        target: URL,
+        onEvent: @escaping (ExportEvent) -> Void
+    ) async throws -> ExportSummary {
+        guard let camera, camera.hasOpenSession, let mediaFiles = camera.mediaFiles else {
+            // Breadcrumb: camera/session gone at export time (unplug or the
+            // locked-phone teardown) — throws into the wizard's catch.
+            throw DeviceDownloadError.cameraUnavailable
+        }
+
+        // Prep: photo/video media only (mediaFiles also carries audio);
+        // missing creation date → skipped (never crashed, never attempted);
+        // destination YYYY/MM from the capture date; ICC saves with the
+        // item's native filename (ICSaveAsFilename not set).
+        let calendar = Calendar.current
+        var preparedItems: [(file: ICCameraFile, isVideo: Bool, date: Date, directory: URL)] = []
+        for item in mediaFiles {
+            guard let file = item as? ICCameraFile,
+                  let date = file.creationDate,
+                  let year = calendar.dateComponents([.year, .month], from: date).year,
+                  let month = calendar.dateComponents([.year, .month], from: date).month
+            else { continue }
+            let isVideo: Bool
+            switch Self.itemKind(item) {
+            case .photo: isVideo = false
+            case .video: isVideo = true
+            case .other: continue // audio/sidecars: not this product's media
+            }
+            let directory = target
+                .appendingPathComponent(String(year))
+                .appendingPathComponent(String(format: "%02d", month))
+            preparedItems.append((file, isVideo, date, directory))
+        }
+        switch selection {
+        case .latest(let count):
+            // Real device semantics: the 10 most recent by capture date (this
+            // supersedes the .currentYear approximation for the device path;
+            // the engine's file-source path keeps .currentYear).
+            preparedItems.sort { $0.date > $1.date }
+            preparedItems = Array(preparedItems.prefix(count))
+        case .years(let years):
+            preparedItems = preparedItems.filter { years.contains(calendar.component(.year, from: $0.date)) }
+        }
+
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        onEvent(.started(total: preparedItems.count))
+
+        let (stream, continuation) = AsyncStream<DownloadResult>.makeStream()
+        self.downloadStream = continuation
+        defer {
+            downloadStream = nil
+            continuation.finish()
+        }
+
+        var iterator = stream.makeAsyncIterator()
+        var exportedCount = 0
+        var failedCount = 0
+        var errorLines: [String] = []
+
+        for (index, prepared) in preparedItems.enumerated() {
+            try Task.checkCancellation()
+            try FileManager.default.createDirectory(at: prepared.directory, withIntermediateDirectories: true)
+            // Overwrite left off: rerun collisions surface as logged failures,
+            // not silent overwrites (incremental mode is a later slice).
+            _ = prepared.file.requestDownload(
+                options: [.downloadsDirectoryURL: prepared.directory]
+            ) { filename, error in
+                Self.onMain {
+                    // Late completions after a finish() are discarded by the
+                    // finished stream — no continuation hazards.
+                    continuation.yield(DownloadResult(saved: filename, error: error))
+                }
+            }
+            guard let result = await iterator.next() else {
+                // Device removed / teardown mid-run; CancellationError when
+                // the wizard cancelled. An in-flight transfer may still land
+                // its file in the folder — harmless leftover.
+                throw Task.isCancelled ? CancellationError() : DeviceDownloadError.cameraUnavailable
+            }
+            if let error = result.error {
+                failedCount += 1
+                errorLines.append(
+                    "\(Date()) device=download name=\(prepared.file.name ?? "?") dest=\(prepared.directory.path) \(error.localizedDescription)"
+                )
+                onEvent(.assetFailed(index: index, total: preparedItems.count, isVideo: prepared.isVideo, summary: error.localizedDescription))
+                let nsError = error as NSError
+                if nsError.domain == "com.apple.ImageCaptureCore", nsError.code == -9943 {
+                    // Breadcrumb for the UX pass: surface "unlock the phone"
+                    // on the copying screen; IC2 fails the run into the
+                    // wizard's catch (back to .photos).
+                    throw DeviceDownloadError.phoneLocked
+                }
+            } else {
+                exportedCount += 1
+                onEvent(.assetExported(index: index, total: preparedItems.count, isVideo: prepared.isVideo))
+            }
+        }
+
+        let logURL = target.appendingPathComponent("export_errors.log")
+        if failedCount > 0, !errorLines.isEmpty {
+            try? errorLines.joined(separator: "\n").write(to: logURL, atomically: true, encoding: .utf8)
+        }
+        return ExportSummary(
+            exported: exportedCount,
+            failed: failedCount,
+            total: preparedItems.count,
+            errorLogURL: logURL
+        )
     }
 
     /// ICC callbacks arrive off-main; all state above is main-actor.
@@ -165,4 +290,25 @@ extension DeviceSource: @preconcurrency ICCameraDeviceDelegate {
     func cameraDevice(_ camera: ICCameraDevice, didReceivePTPEvent eventData: Data) {}
     func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
     func cameraDeviceDidEnableAccessRestriction(_ device: ICDevice) {}
+}
+
+// MARK: - Download types (IC2)
+
+/// Screen-5 selection in real device semantics (see DeviceSource.download).
+enum DeviceSelection {
+    case latest(Int)
+    case years([Int])
+}
+
+/// Failures that abort a device download run into the wizard's catch.
+enum DeviceDownloadError: Error {
+    /// No ICCameraDevice with an open session at export time.
+    case cameraUnavailable
+    /// ICC -9943: the phone is locked (or the phone-side prompt was denied).
+    case phoneLocked
+}
+
+private struct DownloadResult {
+    let saved: String?
+    let error: Error?
 }
