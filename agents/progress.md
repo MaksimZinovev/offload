@@ -31,6 +31,8 @@
 
 ### What's Done (recent)
 
+- [x] **IC1: real iPhone discovery COMPLETE (`f2abf3c`)** — `OFFLOAD_DEVICE=real`: ICDeviceBrowser + open session; Welcome line = REAL device name ("mangoPhone M3🥭") + real 2,020 photos/405 videos (matches ICC probe ground-truth 2,425, one batch + catalogComplete). `import ImageCaptureCore` confined to DeviceSource.swift. Debug findings on record: this SDK HAS `ICCameraDevice.mediaFiles` (an incremental ptpObjectHandle dict would collapse items — deleted); locked phone → session error -9943 "Please unlock" but cached catalog still arrives (breadcrumb for IC2).
+
 - [x] **"It actually exports" COMPLETE (IE1 `0bc3efa` + IE2 `020b911`)** — real engine behind `OFFLOAD_ENGINE=real` (default stays mock): env-var switch at the single call site; real output at `<picked>/Offload/YYYY/MM`; `Sources/Offload/Info.plist` + `scripts/make-app.sh` give the app a bundle identity. LIVE-VERIFIED twice by user: 15 real assets, 481 MB, .plist sidecars, Live Photo pairs, zero failures.
 - [x] **tldraw-mockup implementation COMPLETE** — alpha (coms peer) implemented all 5 checkpoints + destination hotfix; pi-main verified each (build + screenshot + diff) and committed:
   - CP1 `26d58ed` chrome+model (pips header, ConnectedDevicesLine widget, mockup step map, analysis fiction → device details)
