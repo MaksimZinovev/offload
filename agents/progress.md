@@ -29,8 +29,9 @@
   - Scope screen (5): **[The last 10 photos] preselected** + [This year] + year chips 2026-2023 multi-select + "Number of photos" 10/50/100/All chips; matched count + estimate always visible
   - Summary: "On iPhone: 62,539 photos — unchanged"
 
-### What's In Progress
+### What's Done (recent)
 
+- [x] **"It actually exports" COMPLETE (IE1 `0bc3efa` + IE2 `020b911`)** — real engine behind `OFFLOAD_ENGINE=real` (default stays mock): env-var switch at the single call site; real output at `<picked>/Offload/YYYY/MM`; `Sources/Offload/Info.plist` + `scripts/make-app.sh` give the app a bundle identity. LIVE-VERIFIED twice by user: 15 real assets, 481 MB, .plist sidecars, Live Photo pairs, zero failures.
 - [x] **tldraw-mockup implementation COMPLETE** — alpha (coms peer) implemented all 5 checkpoints + destination hotfix; pi-main verified each (build + screenshot + diff) and committed:
   - CP1 `26d58ed` chrome+model (pips header, ConnectedDevicesLine widget, mockup step map, analysis fiction → device details)
   - hotfix+CP2 `831a4c4` — user-caught `…/Offload//Offload` double-append fixed (base/target split + displayPath); WelcomeView + NextStepsView (verbatim checklist)
