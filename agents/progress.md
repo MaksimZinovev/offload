@@ -26,6 +26,7 @@
 - [x] **IC2: real iPhone download COMPLETE (`c664a5a`)** — per-item `ICCameraFile.requestDownload(options:completion:)`, sequential AsyncStream drive loop (late completions discarded, zero continuation misuse); selection: last-10 = 10 most-recent-by-captureDate (documented deviation, device path), years = captureDate-in-year, audio filtered, no-date items skipped; same event stream (screens 6–7 unchanged); 3-way call site (device → engine → mock, Q15 precedence); -9943 locked phone → clean cancel. **LIVE-VERIFIED by user: phone → `<picked>/Offload` through all 7 screens.**
 - [x] README quickstart + dev commands + troubleshooting (`61a8468`) — stale-bundle lesson documented: after code changes re-run `sh scripts/make-app.sh`
 
+- [x] **FB1: fiction→real bridge COMPLETE (see commits)** — device-mode estimate lines read the live catalog (last-10 → ≈10 real; year ticks → real per-year; ETA frozen per run, no per-event re-walk)
 ### Open design questions / side-quests
 
 - [ ] **Fiction→real bridge**: estimate lines still show fictional `yearCounts` (18,976 etc.) — real numbers only appear at Copying; bridge = real library counts in the UI (needs an analysis step design; on-device counts now live via DeviceSource)
