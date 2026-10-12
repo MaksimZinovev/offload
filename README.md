@@ -13,7 +13,20 @@ ImageCaptureCore.
 
 **Family beta.** SwiftUI wizard (7 screens), real engine and real device IO
 behind feature flags; a demo/mock mode is the default so you can explore the
-whole flow without touching anything real.
+whole flow without touching anything real. User-verified end to end (2026-10-11):
+real iPhone → folder transfer + real Mac-library export.
+
+## Install (beta DMG)
+
+```sh
+sh scripts/make-dmg.sh    # -> dist/Offload-0.1.0.dmg (app + Read Me.rtf, ad-hoc signed)
+```
+
+First launch on a fresh Mac: if Gatekeeper blocks the app, right-click →
+Open (or `xattr -dr com.apple.quarantine /path/Offload.app`). Inside the
+DMG, `Read Me.rtf` has the short version. Double-clicking the installed app
+runs demo mode; real iPhone transfers launch with `OFFLOAD_DEVICE=real`
+(see Real iPhone import below).
 
 ## Quickstart
 

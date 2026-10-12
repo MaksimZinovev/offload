@@ -27,7 +27,7 @@
 - [x] README quickstart + dev commands + troubleshooting (`61a8468`) — stale-bundle lesson documented: after code changes re-run `sh scripts/make-app.sh`
 
 - [x] **FB1: fiction→real bridge COMPLETE (see commits)** — device-mode estimate lines read the live catalog (last-10 → ≈10 real; year ticks → real per-year; ETA frozen per run, no per-event re-walk)
-- [x] **PKG1: beta packaging COMPLETE (`4fe7faa`)** — `scripts/make-dmg.sh`: make-app (icon now) → ad-hoc codesign → `dist/Offload-0.1.0.dmg` (hdiutil verify + mount probe). Icon from user's `assets/` PNGs mapped by real pixel dims (filenames off-by-one-scale + byte-duplicates; no 16px source). `docs/dmg-readme.rtf` (Gatekeeper first-launch + unlocked-phone + beta note). User first-launch test in progress.
+- [x] **PKG1: beta packaging COMPLETE (`4fe7faa`)** — `scripts/make-dmg.sh`: make-app (icon now) → ad-hoc codesign → `dist/Offload-0.1.0.dmg` (hdiutil verify + mount probe). Icon from user's `assets/` PNGs mapped by real pixel dims (filenames off-by-one-scale + byte-duplicates; no 16px source). `docs/dmg-readme.rtf` (Gatekeeper first-launch + unlocked-phone + beta note). User-VERIFIED: DMG first-launch works on the user's Mac.
 ### Open design questions / side-quests
 
 - [ ] **Fiction→real bridge**: estimate lines still show fictional `yearCounts` (18,976 etc.) — real numbers only appear at Copying; bridge = real library counts in the UI (needs an analysis step design; on-device counts now live via DeviceSource)
