@@ -10,6 +10,10 @@
   <string>Offload</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
   <key>NSPhotoLibraryUsageDescription</key>
   <string>Offload needs access to your Photos Library to copy photos to the destination folder.</string>
   <key>LSMinimumSystemVersion</key>
