@@ -6,13 +6,17 @@ set -eu
 
 cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
-VERSION="0.1.0" # one manual bump per release; no version plumbing yet
-DMG="dist/Offload-$VERSION.dmg"
-SETUP="dist/_dmg-setup"
-README="docs/dmg-readme.rtf"
 APP=".build/Offload.app"
+README="docs/dmg-readme.rtf"
+SETUP="dist/_dmg-setup"
 
 sh scripts/make-app.sh
+
+# Version comes from the stamped bundle (make-app.sh's plist) so the DMG
+# filename can never drift from what the app's footer shows.
+VERSION=$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist" 2>/dev/null) \
+  || { echo "make-dmg: no version in bundle plist - run make-app.sh first" >&2; exit 1; }
+DMG="dist/Offload-$VERSION.dmg"
 
 # Ad-hoc sign BEFORE the copy into the DMG staging (the copy keeps the
 # identity); see agents/progress.md for the TCC/bundle-identity recipe.
