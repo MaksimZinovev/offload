@@ -29,12 +29,12 @@ works.
 ### Installing on a new Mac
 
 1. Open the downloads page: **<https://github.com/MaksimZinovev/offload/releases>**
-2. Click the release named **“Offload 0.1.0 — family beta”** and download
-   **Offload-0.1.0.dmg** (the download link is under “Assets” — the small
-   triangle if it is folded closed).
+2. In the list of releases, open the newest one (tagged with the highest
+   version number, and usually marked **Latest**). Download the DMG file
+   called **Offload-<number>.dmg** (the download link hides under “Assets”
+   — the small triangle if it is folded closed).
 3. Find the downloaded file in **Downloads** (Dock, or Finder → Downloads).
-4. Double-click **Offload-0.1.0.dmg**. A window opens showing the
-   **Offload** app icon.
+4. Double-click the DMG. A window opens showing the **Offload** app icon.
 5. In that window, **drag the Offload icon onto the Applications folder**
    (this copies it to your Mac — the normal install step).
 6. Close the DMG window and **eject** the disk “Offload” (Finder sidebar →
@@ -56,10 +56,13 @@ xattr -dr com.apple.quarantine /Applications/Offload.app
 
 The same instructions ship inside the DMG as **“Read Me.rtf”**.
 
+The current release is tagged **v0.1.1** — see “What's new in 0.1.1” on
+its release page for what changed.
+
 ### Building the installer yourself (developer path)
 
 ```sh
-sh scripts/make-dmg.sh    # -> dist/Offload-0.1.0.dmg (app + Read Me.rtf, ad-hoc signed)
+sh scripts/make-dmg.sh    # -> dist/Offload-<version>.dmg (app + Read Me.rtf, ad-hoc signed)
 ```
 
 ## Quickstart
