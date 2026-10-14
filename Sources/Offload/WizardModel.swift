@@ -49,33 +49,53 @@ final class WizardModel: ObservableObject {
     static let yearCounts: [Int: Int] = [2026: 4_812, 2025: 11_234, 2024: 18_976, 2023: 27_517]
     static let currentYear = 2026
 
-    // MARK: - Device (OFFLOAD_DEVICE=real: live browser truth; demo fiction otherwise)
+    // MARK: - Device mode (env OFFLOAD_DEVICE > in-app pref > demo fiction)
 
-    /// Mirrors the engine gate: OFFLOAD_DEVICE=real runs the live
-    /// ICDeviceBrowser (DeviceSource); anything else/absent keeps the demo
-    /// toggle fiction byte-for-byte.
-    static let usesRealDevice =
-        ProcessInfo.processInfo.environment["OFFLOAD_DEVICE"] == "real"
+    /// The in-app toggle pref (APP1): "real" / "demo"; ABSENT = demo. Set from
+    /// the Connect-device screen so the family flips it inside the app — no
+    /// Terminal. In the app bundle, the `defaults`-CLI domain is the bundle
+    /// id (com.maksimzinovev.Offload).
+    static let deviceModePrefKey = "offload.deviceMode"
+
+    /// Launch-time env override (dev/CI contract, unchanged): `OFFLOAD_DEVICE`
+    /// set at all is decisive — exactly "real" forces real mode; ANY other
+    /// value (incl. "off") forces demo EVEN IF the pref says real (escape
+    /// hatch so tests/CI stay deterministic). nil = unset → the persisted
+    /// pref decides.
+    private static let envDeviceMode: Bool? =
+        ProcessInfo.processInfo.environment["OFFLOAD_DEVICE"].map { $0 == "real" }
+
+    /// Env-forced runs (dev/CI): the in-app toggle shows the resolved truth
+    /// but cannot flip it (env-wins contract; deterministic for CI).
+    static var deviceModeEnvForced: Bool { envDeviceMode != nil }
+
+    /// Resolved real-vs-demo device mode (env > pref > demo). DYNAMIC after
+    /// the in-app toggle (APP1) — every device-mode branch reads this, never
+    /// a stored copy. Demo default: no pref + no env = false (today's
+    /// behavior, byte-for-byte: no source, no extra publishes).
+    @Published private(set) var usesRealDevice = false
 
     /// The demo (fiction) device name.
     static let fictionDeviceName = "iPhone 13 Pro"
 
-    /// Real device plumbing (real mode only; nil otherwise): one browser
-    /// started at init, reused across "Export more" restarts, stopped at
-    /// deinit (no leak between wizard restarts).
-    private let deviceSource: DeviceSource?
+    /// Real device plumbing (real mode only; nil in demo): the browser
+    /// source starts at init in real mode, later on first toggle-to-real
+    /// (a demo launch creates nothing); reused across toggles and "Export
+    /// more" restarts, stopped at deinit. start()/stop() are a restartable
+    /// pair (IC2 era).
+    private var deviceSource: DeviceSource?
     private var deviceCancellable: AnyCancellable?
 
     init() {
-        if Self.usesRealDevice {
-            let source = DeviceSource()
-            deviceSource = source
-            deviceCancellable = source.$snapshot.sink { [weak self] in
-                self?.applyDeviceSnapshot($0)
-            }
-            source.start()
+        // Resolution order (APP1): env wins; else the persisted pref
+        // (string "real" only); else the demo fiction default.
+        if let forced = Self.envDeviceMode {
+            usesRealDevice = forced
         } else {
-            deviceSource = nil
+            usesRealDevice = UserDefaults.standard.string(forKey: Self.deviceModePrefKey) == "real"
+        }
+        if usesRealDevice {
+            ensureDeviceSource().start()
         }
     }
 
@@ -95,6 +115,45 @@ final class WizardModel: ObservableObject {
         deviceItemCount = snap.itemCount
         devicePhotoCount = snap.photoCount
         deviceVideoCount = snap.videoCount
+    }
+
+    // MARK: - In-app device-mode toggle (APP1; Connect-device screen only)
+
+    /// Switch to the real phone: persist the pref and start the live browser
+    /// (idempotent). Belt-and-braces idle guard — the toggle lives only on
+    /// the Connect-device screen, which is unreachable mid-run.
+    func enableRealDeviceMode() {
+        guard case .idle = run, !usesRealDevice else { return }
+        usesRealDevice = true
+        UserDefaults.standard.set("real", forKey: Self.deviceModePrefKey)
+        ensureDeviceSource().start()
+    }
+
+    /// Switch back to the demo fiction: stop the browser (the source object
+    /// stays alive but stopped — same call deinit makes), restore the
+    /// fiction device branch, persist "demo".
+    func disableRealDeviceMode() {
+        guard case .idle = run, usesRealDevice else { return }
+        usesRealDevice = false
+        UserDefaults.standard.set("demo", forKey: Self.deviceModePrefKey)
+        // stop() publishes the empty snapshot, resetting connected/counts;
+        // the name is deliberately left alone by the snapshot mirror, so the
+        // fiction name is restored explicitly.
+        deviceSource?.stop()
+        deviceName = Self.fictionDeviceName
+        deviceConnected = false
+    }
+
+    /// The real browser, created on first need (a demo launch has none) and
+    /// reused across toggles; start()/stop() are the restart pair.
+    private func ensureDeviceSource() -> DeviceSource {
+        if let source = deviceSource { return source }
+        let source = DeviceSource()
+        deviceSource = source
+        deviceCancellable = source.$snapshot.sink { [weak self] in
+            self?.applyDeviceSnapshot($0)
+        }
+        return source
     }
     static var devicePhotos: Int { yearCounts.values.reduce(0, +) } // 62,539 — stays consistent with yearCounts
     static let deviceVideos = 1_842
@@ -149,7 +208,7 @@ final class WizardModel: ObservableObject {
     }
 
     /// Photos the current selection matches.
-    /// - Real-device mode (OFFLOAD_DEVICE=real): the LIVE phone-catalog count
+    /// - Real-device mode (env or the in-app pref): the LIVE phone-catalog count
     ///   (DeviceSource.selectionCount — same walk semantics as the IC2
     ///   download prep). Catalog mid-enumeration shows the live count as-is
     ///   (possibly 0 → Continue stays disabled). Empty selection → 0.
@@ -157,7 +216,7 @@ final class WizardModel: ObservableObject {
     ///   fictional yearCounts — an engine-side count API is the later
     ///   bridge; no PHAsset fetches are invented here.
     var scopeTotal: Int {
-        if Self.usesRealDevice, let source = deviceSource {
+        if usesRealDevice, let source = deviceSource {
             return source.selectionCount(
                 for: latestSelected ? DeviceSelection.latest(exportCount ?? 10) : .years(selectedYears.sorted())
             )
@@ -240,7 +299,7 @@ final class WizardModel: ObservableObject {
         exportTask = Task {
             do {
                 let summary: ExportSummary
-                if Self.usesRealDevice, let source = deviceSource {
+                if usesRealDevice, let source = deviceSource {
                     summary = try await source.download(
                         selection: latestSelected ? DeviceSelection.latest(exportCount ?? 10) : .years(selectedYears.sorted()),
                         target: exportBase
@@ -304,7 +363,7 @@ final class WizardModel: ObservableObject {
         latestSelected = true
         selectedYears = []
         destination = Self.defaultDestination
-        if !Self.usesRealDevice {
+        if !usesRealDevice {
             // Real phone stays connected — the browser keeps the truth.
             deviceConnected = false
         }

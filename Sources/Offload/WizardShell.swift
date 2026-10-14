@@ -157,8 +157,8 @@ struct ConnectedDevicesLine: View {
     }
 }
 
-/// The unfolded per-device details: fictional demo stats, except under
-/// OFFLOAD_DEVICE=real where only derivable real counts are shown — stats
+/// The unfolded per-device details: fictional demo stats, except in real
+/// mode where only derivable real counts are shown — stats
 /// that cannot be derived for free (GB size, year range, ETA) are hidden,
 /// not fabricated.
 struct DeviceDetailsRows: View {
@@ -171,7 +171,7 @@ struct DeviceDetailsRows: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if WizardModel.usesRealDevice {
+            if model.usesRealDevice {
                 // Item count 0 also covers "connected, still enumerating" —
                 // nothing is invented meanwhile.
                 if model.deviceItemCount > 0 {
