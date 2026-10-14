@@ -5,6 +5,9 @@ your Mac. Plug the phone in via USB, click through seven simple steps, and
 your photos and videos land in the destination folder. **Nothing is deleted
 from the iPhone** — offload, not destruct.
 
+![alt text](assets/screenshot.png)
+
+
 Built on [PhotosExport](https://github.com/MaksimZinovev/PhotosExport) for
 Apple Photos library access, plus direct USB device import via
 ImageCaptureCore.
@@ -23,7 +26,7 @@ This is beta software: it is not sold in the App Store and it is not
 trust it. That's expected — follow the steps below exactly and first launch
 works.
 
-### Installing on a new Mac (your family, or you on another Mac)
+### Installing on a new Mac
 
 1. Open the downloads page: **<https://github.com/MaksimZinovev/offload/releases>**
 2. Click the release named **“Offload 0.1.0 — family beta”** and download
