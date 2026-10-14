@@ -78,6 +78,10 @@ it" button on step 3 simulates plugging in the phone.
 
 ### Real iPhone import (the product)
 
+Open the installed app and pick **My iPhone (real transfer)** on the
+Connect-device step — the choice persists across restarts, and demo mode is
+one toggle away. Terminal is not required; the env way also works:
+
 ```sh
 sh scripts/make-app.sh                                  # build + assemble .build/Offload.app
 OFFLOAD_DEVICE=real .build/Offload.app/Contents/MacOS/Offload
