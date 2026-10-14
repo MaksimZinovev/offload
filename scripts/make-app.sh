@@ -48,10 +48,14 @@ if command -v sips >/dev/null 2>&1 && command -v iconutil >/dev/null 2>&1; then
 fi
 
 # Stamp the build identity so the in-app footer always answers "which
-# build is this?" (WizardShell.buildInfo reads these keys).
+# build is this?" (WizardShell.buildInfo reads these keys). Stamped ONLY
+# into the bundle here - the sources Info.plist never carries release
+# metadata, so it needs no bump coordination.
 COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo nobuildinfo)
 PLIST="$APP/Contents/Info.plist"
 plutil -replace OffloadCommitHash -string "$COMMIT" "$PLIST"
+plutil -replace CFBundleShortVersionString -string "0.1.1" "$PLIST"
+plutil -replace CFBundleVersion -string "1" "$PLIST"
 
 echo "make-app: bundle ready at $APP (build: $COMMIT)"
 echo "make-app: run with:"
