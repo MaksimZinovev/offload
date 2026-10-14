@@ -18,15 +18,46 @@ real iPhone → folder transfer + real Mac-library export.
 
 ## Install (beta DMG)
 
+This is beta software: it is not sold in the App Store and it is not
+"notarized" with Apple, so your Mac's Gatekeeper will ask once whether you
+trust it. That's expected — follow the steps below exactly and first launch
+works.
+
+### Installing on a new Mac (your family, or you on another Mac)
+
+1. Open the downloads page: **<https://github.com/MaksimZinovev/offload/releases>**
+2. Click the release named **“Offload 0.1.0 — family beta”** and download
+   **Offload-0.1.0.dmg** (the download link is under “Assets” — the small
+   triangle if it is folded closed).
+3. Find the downloaded file in **Downloads** (Dock, or Finder → Downloads).
+4. Double-click **Offload-0.1.0.dmg**. A window opens showing the
+   **Offload** app icon.
+5. In that window, **drag the Offload icon onto the Applications folder**
+   (this copies it to your Mac — the normal install step).
+6. Close the DMG window and **eject** the disk “Offload” (Finder sidebar →
+   Eject symbol). You don't need the DMG file any more.
+7. Open **Applications** (Finder sidebar or Launchpad), find **Offload** —
+   then **hold Control and click** it (or right-click) and choose **Open**.
+8. A Gatekeeper dialog appears (“…can't verify…”). Click **Open** again.
+   You only have to do this once — every later launch opens normally.
+9. The app starts in **demo mode**: a pretend phone with sample photos, so
+   you can safely click through all 7 screens before touching real data.
+
+If a launch is still blocked after step 8, paste this one line into
+Terminal (Applications → Utilities → Terminal) and press Return — then
+open Offload like any normal app:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Offload.app
+```
+
+The same instructions ship inside the DMG as **“Read Me.rtf”**.
+
+### Building the installer yourself (developer path)
+
 ```sh
 sh scripts/make-dmg.sh    # -> dist/Offload-0.1.0.dmg (app + Read Me.rtf, ad-hoc signed)
 ```
-
-First launch on a fresh Mac: if Gatekeeper blocks the app, right-click →
-Open (or `xattr -dr com.apple.quarantine /path/Offload.app`). Inside the
-DMG, `Read Me.rtf` has the short version. Double-clicking the installed app
-runs demo mode; real iPhone transfers launch with `OFFLOAD_DEVICE=real`
-(see Real iPhone import below).
 
 ## Quickstart
 
