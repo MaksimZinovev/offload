@@ -90,8 +90,26 @@ struct WizardShell: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(!nextEnabled)
             }
+        }.overlay(alignment: .leading) {
+            Text(buildInfo)
+                .font(.system(size: 9).monospaced())
+                .foregroundStyle(.tertiary)
+                .offset(y: 14) // hangs below the bar: never collides with Back/Continue
         }
         .padding(.top, 8)
+    }
+
+    /// Always-visible build identity ("Offload 0.1.1 · a1b2c3d"); "dev" in
+    /// unbundled swift-run launches (make-app.sh stamps the real values into
+    /// the bundle's Info.plist after assembly). Answers "which build is this?".
+    private var buildInfo: String {
+        let bundle = Bundle.main
+        guard bundle.bundleIdentifier != nil,
+              let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        else { return "Offload · dev" }
+        let commit = (bundle.object(forInfoDictionaryKey: "OffloadCommitHash") as? String)
+            .map { " · \($0)" } ?? ""
+        return "Offload \(version)\(commit)"
     }
 
     private var showsPrimary: Bool {

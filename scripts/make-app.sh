@@ -47,7 +47,13 @@ if command -v sips >/dev/null 2>&1 && command -v iconutil >/dev/null 2>&1; then
     || echo "make-app: icon conversion failed — assembling iconless" >&2
 fi
 
-echo "make-app: bundle ready at $APP"
+# Stamp the build identity so the in-app footer always answers "which
+# build is this?" (WizardShell.buildInfo reads these keys).
+COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo nobuildinfo)
+PLIST="$APP/Contents/Info.plist"
+plutil -replace OffloadCommitHash -string "$COMMIT" "$PLIST"
+
+echo "make-app: bundle ready at $APP (build: $COMMIT)"
 echo "make-app: run with:"
 echo "  OFFLOAD_ENGINE=real $APP/Contents/MacOS/Offload"
 echo "make-app: (plain '$APP/Contents/MacOS/Offload' stays on the mock engine)"
